@@ -1,0 +1,398 @@
+/* src/components/TreeStyles.css - 표준 트리뷰 디자인 */
+.tree-view {
+  background: linear-gradient(135deg, var(--color-white) 0%, var(--color-gray-50) 100%);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-3);
+  flex: 1;
+  overflow-y: auto;
+  font-family: var(--font-family-sans);
+  position: relative;
+  box-shadow: var(--shadow-sm);
+  min-height: 300px;
+}
+
+.tree-view::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-info) 50%, var(--color-primary) 100%);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+/* 트리 노드 기본 스타일 */
+.tree-node {
+  position: relative;
+  user-select: none;
+}
+
+.tree-node-content {
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-2) var(--spacing-3);
+  margin: var(--spacing-1) 0;
+  border-radius: var(--radius-lg);
+  transition: var(--transition-base);
+  cursor: pointer;
+  position: relative;
+  gap: var(--spacing-2);
+}
+
+/* 계층 구조를 위한 들여쓰기 */
+.tree-node.level-0 {
+  padding-left: 0;
+}
+
+.tree-node.level-1 {
+  padding-left: 24px;
+}
+
+.tree-node.level-2 {
+  padding-left: 48px;
+}
+
+.tree-node.level-3 {
+  padding-left: 72px;
+}
+
+.tree-node.level-4 {
+  padding-left: 96px;
+}
+
+.tree-node-content:hover {
+  background: linear-gradient(135deg, var(--color-primary-50) 0%, var(--color-gray-50) 100%);
+  transform: translateX(2px);
+}
+
+/* 확장/축소 버튼 */
+.expand-button {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: var(--color-gray-200);
+  border-radius: var(--radius-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-base);
+  color: var(--color-gray-600);
+  margin-right: var(--spacing-1);
+  flex-shrink: 0;
+}
+
+.expand-button:hover {
+  background: var(--color-primary-100);
+  color: var(--color-primary-700);
+  transform: scale(1.1);
+}
+
+.expand-button.expanded {
+  background: #dbeafe;
+  color: #1e3a8a;
+}
+
+.expand-button svg {
+  width: 12px;
+  height: 12px;
+  transition: var(--transition-base);
+}
+
+.expand-button.expanded svg {
+  transform: rotate(90deg);
+}
+
+/* 체크박스 스타일 */
+.tree-node-checkbox {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.tree-node-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-gray-300);
+  border-radius: var(--radius-base);
+  background: var(--color-white);
+  cursor: pointer;
+  position: relative;
+  transition: var(--transition-base);
+  appearance: none;
+  margin: 0;
+}
+
+.tree-node-checkbox input[type="checkbox"]:hover {
+  border-color: var(--color-primary);
+  transform: scale(1.05);
+}
+
+.tree-node-checkbox input[type="checkbox"]:checked {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-600) 100%);
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.tree-node-checkbox input[type="checkbox"]:checked::before {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--color-white);
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.tree-node-checkbox input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+/* 노드 아이콘 */
+.tree-node-icon {
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* 노드 라벨 */
+.tree-node-label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  color: var(--color-gray-700);
+  cursor: pointer;
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-base);
+  transition: var(--transition-base);
+  flex: 1;
+  user-select: none;
+  line-height: 1.4;
+}
+
+.tree-node-label:hover {
+  color: #1d4ed8;
+  background: #dbeafe;
+}
+
+.tree-node-checkbox input[type="checkbox"]:checked + .tree-node-icon + .tree-node-label {
+  color: #1e3a8a;
+  font-weight: var(--font-semibold);
+}
+
+/* 자식 노드 컨테이너 */
+.tree-children {
+  position: relative;
+  margin-left: var(--spacing-3);
+  border-left: 1px dashed var(--color-gray-300);
+  padding-left: var(--spacing-3);
+}
+
+.tree-children::before {
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 0;
+  bottom: 50%;
+  width: 1px;
+  background: linear-gradient(180deg, var(--color-gray-300) 0%, transparent 100%);
+}
+
+/* 마지막 자식 노드의 연결선 처리 */
+.tree-children > .tree-node:last-child::after {
+  content: '';
+  position: absolute;
+  left: calc(-1 * var(--spacing-3) - 1px);
+  top: 50%;
+  bottom: -100%;
+  width: 1px;
+  background: var(--color-white);
+}
+
+/* 루트 레벨 노드 강조 */
+.tree-node.level-0 > .tree-node-content {
+  font-weight: var(--font-semibold);
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-200);
+  box-shadow: var(--shadow-sm);
+  margin: var(--spacing-2) 0;
+}
+
+.tree-node.level-0 > .tree-node-content:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--color-primary-200);
+}
+
+/* 애니메이션 효과 */
+.tree-children {
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    max-height: 1000px;
+    transform: translateY(0);
+  }
+}
+
+/* 검색 하이라이트 */
+.tree-node-label.highlight {
+  background: linear-gradient(135deg, var(--color-warning-light) 0%, var(--color-warning) 100%);
+  color: var(--color-gray-900);
+  font-weight: var(--font-bold);
+}
+
+/* 선택된 경로 표시 */
+.tree-node-content.selected-path {
+  background: linear-gradient(135deg, var(--color-success-light) 0%, var(--color-success) 100%);
+  color: var(--color-white);
+  box-shadow: var(--shadow-sm);
+}
+
+/* 로딩 상태 */
+.tree-node-content.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.tree-node-content.loading::after {
+  content: '';
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-gray-300);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-left: auto;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 빈 트리 상태 */
+.tree-view-empty {
+  text-align: center;
+  padding: var(--spacing-8) var(--spacing-4);
+  color: var(--color-gray-500);
+}
+
+.tree-view-empty::before {
+  content: '📁';
+  display: block;
+  font-size: 2rem;
+  margin-bottom: var(--spacing-2);
+  opacity: 0.5;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .tree-view {
+    padding: var(--spacing-3);
+    max-height: 300px;
+  }
+
+  .tree-node.level-0 { padding-left: 0; }
+  .tree-node.level-1 { padding-left: 16px; }
+  .tree-node.level-2 { padding-left: 32px; }
+  .tree-node.level-3 { padding-left: 48px; }
+  .tree-node.level-4 { padding-left: 64px; }
+
+  .tree-node-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+  }
+
+  .tree-node-label {
+    font-size: var(--text-xs);
+  }
+
+  .expand-button {
+    width: 18px;
+    height: 18px;
+  }
+
+  .tree-children {
+    margin-left: var(--spacing-2);
+    padding-left: var(--spacing-2);
+  }
+}
+
+/* 호환성을 위한 기존 스타일 */
+.rule-monitoring-tree {
+  background: linear-gradient(135deg, var(--color-white) 0%, var(--color-gray-50) 100%);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-4);
+  max-height: 400px;
+  overflow-y: auto;
+  font-family: var(--font-family-sans);
+  position: relative;
+  box-shadow: var(--shadow-sm);
+}
+
+.rule-monitoring-tree::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-info) 50%, var(--color-primary) 100%);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.rule-monitoring-tree pre {
+  background-color: #f9f9f9;
+  border: 1px solid #e0e0e0;
+  padding: 15px;
+  border-radius: 5px;
+  white-space: pre-wrap;
+  font-family: monospace;
+}
+
+.rule-monitoring-tree ul {
+  list-style: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+.rule-monitoring-tree li {
+  display: block;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .rule-monitoring-tree {
+    padding: var(--spacing-4);
+    max-height: 300px;
+  }
+  
+  .rule-monitoring-tree ul ul {
+    padding-left: var(--spacing-4);
+  }
+  
+  .rule-monitoring-tree input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+  }
+  
+  .rule-monitoring-tree label {
+    font-size: var(--text-xs);
+  }
+}

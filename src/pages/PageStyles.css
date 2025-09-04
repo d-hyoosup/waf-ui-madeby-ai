@@ -1,0 +1,77 @@
+.page-container {
+  padding: 20px;
+}
+
+.page-container h2 {
+  margin-top: 0;
+  margin-bottom: 20px;
+  color: #333;
+}
+
+/* 탭 컨테이너 최적화 */
+.tabs-container {
+  margin-bottom: var(--spacing-3);
+  border-bottom: 1px solid var(--color-gray-200);
+  padding-bottom: 0;
+}
+
+.tab-button {
+  background-color: transparent;
+  border: none;
+  padding: var(--spacing-2) var(--spacing-3);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--color-gray-600);
+  border-bottom: 2px solid transparent;
+  transition: var(--transition-base);
+  font-weight: var(--font-medium);
+}
+
+.tab-button.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+  font-weight: var(--font-semibold);
+}
+
+.tab-button:hover {
+  color: var(--color-primary);
+}
+
+.main-content-area {
+  margin-top: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* 각종 컨트롤 (버튼 등) */
+.controls {
+  margin-bottom: 15px;
+  display: flex;
+  gap: 10px;
+}
+
+.query-button, .add-button, .apply-button, .manual-backup-button, .compare-button, .add-setting-button {
+  padding: 8px 15px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: #f0f0f0;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.query-button:hover, .add-button:hover, .apply-button:hover, .manual-backup-button:hover, .compare-button:hover, .add-setting-button:hover {
+  background-color: #e0e0e0;
+}
+
+.add-button, .apply-button, .manual-backup-button {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.add-button:hover, .apply-button:hover, .manual-backup-button:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}

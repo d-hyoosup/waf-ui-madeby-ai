@@ -1,0 +1,187 @@
+/* src/components/CodeViewer.css - 코드 비교용 차이점 하이라이팅 스타일 */
+
+.code-viewer-with-diff {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: #e2e8f0;
+  padding: var(--spacing-4);
+  border-radius: var(--radius-xl);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-sm);
+  line-height: var(--leading-relaxed);
+  overflow: auto;
+  flex-grow: 1;
+  border: 1px solid var(--color-gray-300);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-height: 500px;
+}
+
+.code-line {
+  min-height: 1.5em;
+  padding: 2px 8px;
+  margin: 1px 0;
+  border-radius: 3px;
+  transition: var(--transition-base);
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* 추가된 라인 (현재 버전/B 형상에만 있음) */
+.code-line.diff-added {
+  background-color: rgba(34, 197, 94, 0.2);
+  border-left: 3px solid #22c55e;
+  color: #dcfce7;
+  padding-left: 12px;
+}
+
+/* 제거된 라인 (백업 버전/A 형상에만 있음) */
+.code-line.diff-removed {
+  background-color: rgba(239, 68, 68, 0.2);
+  border-left: 3px solid #ef4444;
+  color: #fecaca;
+  padding-left: 12px;
+}
+
+/* 변경되지 않은 라인 */
+.code-line:not(.diff-added):not(.diff-removed) {
+  color: #e2e8f0;
+}
+
+/* 호버 효과 */
+.code-line:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* 빈 라인 처리 */
+.code-line:empty::before {
+  content: '\00a0'; /* non-breaking space */
+}
+
+/* 리소스 리스트 헤더 */
+.resource-list h4 {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-gray-700);
+  margin: 0 0 var(--spacing-3) 0;
+  padding: 0 var(--spacing-2);
+}
+
+/* Diff 범례 */
+.diff-legend {
+  display: flex;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-gray-50);
+  border-radius: var(--radius-base);
+  font-size: var(--text-xs);
+  border: 1px solid var(--color-gray-200);
+}
+
+.diff-legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.diff-legend-color {
+  width: 12px;
+  height: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.diff-legend-added {
+  background-color: rgba(34, 197, 94, 0.3);
+  border: 1px solid #22c55e;
+}
+
+.diff-legend-removed {
+  background-color: rgba(239, 68, 68, 0.3);
+  border: 1px solid #ef4444;
+}
+
+/* JSON 뷰어 컨테이너 헤더 개선 */
+.json-viewer-container h4 {
+  margin-bottom: var(--spacing-3);
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-gray-800);
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-gray-100);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.json-viewer-container h4::after {
+  content: attr(data-changes);
+  font-size: var(--text-xs);
+  background: var(--color-primary);
+  color: var(--color-white);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-medium);
+}
+
+/* 변경사항 카운터 */
+.changes-counter {
+  font-size: var(--text-xs);
+  background: var(--color-warning);
+  color: var(--color-gray-900);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-semibold);
+  margin-left: var(--spacing-2);
+}
+
+/* 스크롤바 스타일링 */
+.code-viewer-with-diff::-webkit-scrollbar {
+  width: 8px;
+}
+
+.code-viewer-with-diff::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.code-viewer-with-diff::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.code-viewer-with-diff::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* 반응형 처리 */
+@media (max-width: 768px) {
+  .code-viewer-with-diff {
+    font-size: var(--text-xs);
+    padding: var(--spacing-3);
+    max-height: 300px;
+  }
+
+  .code-line {
+    font-size: 11px;
+    padding: 1px 4px;
+    margin: 0.5px 0;
+  }
+
+  .code-line.diff-added,
+  .code-line.diff-removed {
+    padding-left: 8px;
+  }
+
+  .diff-legend {
+    flex-direction: column;
+    gap: var(--spacing-2);
+  }
+
+  .json-viewer-container h4 {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--spacing-2);
+  }
+}
