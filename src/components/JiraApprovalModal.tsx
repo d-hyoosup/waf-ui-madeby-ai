@@ -1,27 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import type { RestoreData, InterruptFlag } from '../types/restore.types';
 import './ModalStyles.css';
 import { ExternalLinkIcon } from './Icons';
-
-type RollbackStatus = 'NONE' | 'REQUESTED' | 'WAITING_FOR_APPROVAL' | 'PROCESSING' | 'COMPLETED';
-type InterruptFlag = 'CANCEL' | 'FORCE_APPROVED';
-
-interface JiraIssue {
-  issueKey: string;
-  link: string;
-  interruptFlag: InterruptFlag;
-}
-
-interface RestoreData {
-  snapshotId: string;
-  accountId: string;
-  accountName: string;
-  regionCode: string;
-  regionName: string;
-  scope: string;
-  tagName: string;
-  status: RollbackStatus;
-  issues: JiraIssue[];
-}
 
 interface JiraApprovalModalProps {
   onClose: () => void;

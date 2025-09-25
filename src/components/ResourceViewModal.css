@@ -1,0 +1,336 @@
+/* src/components/ResourceViewModal.css - 리소스 뷰 모달 스타일 */
+
+.resource-view-body {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+  min-height: 500px;
+  height: 70vh;
+}
+
+/* 탭 영역 */
+.resource-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--color-gray-200);
+  background: var(--color-gray-50);
+  padding: 0 var(--spacing-4);
+}
+
+.resource-tab {
+  padding: var(--spacing-3) var(--spacing-5);
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--color-gray-600);
+  font-size: var(--text-sm);
+  font-weight: var(--font-medium);
+  cursor: pointer;
+  transition: var(--transition-base);
+  position: relative;
+  margin-bottom: -2px;
+}
+
+.resource-tab:hover {
+  color: var(--color-gray-800);
+  background: var(--color-gray-100);
+}
+
+.resource-tab.active {
+  color: var(--color-primary);
+  background: var(--color-white);
+  border-bottom-color: var(--color-primary);
+  font-weight: var(--font-semibold);
+}
+
+/* 컨텐츠 래퍼 */
+.resource-content-wrapper {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 파일 목록 패널 */
+.file-list-panel {
+  width: 260px;
+  flex-shrink: 0;
+  border-right: 1px solid var(--color-gray-200);
+  background: var(--color-gray-50);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.file-list-panel h5 {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-gray-700);
+  padding: var(--spacing-4) var(--spacing-4) var(--spacing-3);
+  margin: 0;
+  border-bottom: 1px solid var(--color-gray-200);
+  background: var(--color-white);
+}
+
+.file-list-panel .file-list {
+  flex: 1;
+  overflow-y: auto;
+  list-style: none;
+  padding: var(--spacing-2);
+  margin: 0;
+}
+
+.file-list-panel .file-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  margin-bottom: var(--spacing-1);
+  cursor: pointer;
+  border-radius: var(--radius-lg);
+  transition: var(--transition-base);
+  font-size: var(--text-sm);
+  position: relative;
+}
+
+.file-list-panel .file-list li:hover {
+  background-color: var(--color-gray-100);
+}
+
+.file-list-panel .file-list li.active {
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-600) 100%);
+  color: var(--color-white);
+  font-weight: var(--font-medium);
+}
+
+.file-list-panel .file-list li.no-files {
+  padding: var(--spacing-4);
+  text-align: center;
+  color: var(--color-gray-500);
+  font-style: italic;
+  cursor: default;
+}
+
+.file-list-panel .file-list li.no-files:hover {
+  background-color: transparent;
+}
+
+/* 파일 상태 표시 */
+.file-status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.file-status-indicator.status-itemA_only {
+  background-color: #3b82f6;
+}
+
+.file-status-indicator.status-itemB_only {
+  background-color: #f97316;
+}
+
+.file-status-indicator.status-both {
+  background-color: #22c55e;
+}
+
+.file-status-indicator.status-single {
+  background-color: var(--color-gray-400);
+}
+
+.file-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
+}
+
+.file-status-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+  background: var(--color-gray-200);
+  color: var(--color-gray-700);
+  flex-shrink: 0;
+}
+
+.file-list-panel .file-list li.active .file-status-tag {
+  background: rgba(255, 255, 255, 0.3);
+  color: var(--color-white);
+}
+
+/* 파일 상태 범례 */
+.file-status-legend {
+  padding: var(--spacing-3) var(--spacing-4);
+  border-top: 1px solid var(--color-gray-200);
+  background: var(--color-white);
+  font-size: var(--text-xs);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.file-status-legend span {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  color: var(--color-gray-600);
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-indicator.status-itemA-only {
+  background-color: #3b82f6;
+}
+
+.status-indicator.status-itemB-only {
+  background-color: #f97316;
+}
+
+.status-indicator.status-both {
+  background-color: #22c55e;
+}
+
+/* 리소스 컨텐츠 영역 */
+.resource-content {
+  flex: 1;
+  display: flex;
+  gap: 0;
+  overflow: hidden;
+  background: var(--color-white);
+}
+
+.json-viewer-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-4);
+  min-width: 0;
+  border-right: 1px solid var(--color-gray-200);
+}
+
+.json-viewer-container:last-child {
+  border-right: none;
+}
+
+.json-viewer-container h4 {
+  margin: 0 0 var(--spacing-3) 0;
+  font-size: var(--text-base);
+  font-weight: var(--font-semibold);
+  color: var(--color-gray-800);
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-gray-100);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-gray-200);
+}
+
+.file-info {
+  font-size: var(--text-xs);
+  color: var(--color-gray-600);
+  background-color: var(--color-gray-100);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-base);
+  margin-bottom: var(--spacing-3);
+  font-family: var(--font-family-mono);
+  border-left: 3px solid var(--color-primary);
+}
+
+.json-viewer,
+.code-viewer-with-diff {
+  background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+  color: #e2e8f0;
+  padding: var(--spacing-4);
+  border-radius: var(--radius-xl);
+  font-family: var(--font-family-mono);
+  font-size: var(--text-xs);
+  line-height: var(--leading-relaxed);
+  overflow: auto;
+  flex: 1;
+  white-space: pre;
+  border: 1px solid var(--color-gray-300);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* 작업 배지 버튼 스타일 */
+.action-badges {
+  display: flex;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+.badge-button {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--font-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+  white-space: nowrap;
+  border: none;
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.badge-button:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.badge-button.badge-warning {
+  background: linear-gradient(135deg, var(--color-warning) 0%, #d97706 100%);
+  color: var(--color-gray-900);
+}
+
+.badge-button.badge-danger {
+  background: linear-gradient(135deg, var(--color-danger) 0%, #dc2626 100%);
+  color: var(--color-white);
+}
+
+.badge-button.badge-info {
+  background: linear-gradient(135deg, var(--color-info) 0%, #2563eb 100%);
+  color: var(--color-white);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 1024px) {
+  .file-list-panel {
+    width: 220px;
+  }
+}
+
+@media (max-width: 768px) {
+  .resource-content-wrapper {
+    flex-direction: column;
+  }
+
+  .file-list-panel {
+    width: 100%;
+    max-height: 200px;
+    border-right: none;
+    border-bottom: 1px solid var(--color-gray-200);
+  }
+
+  .resource-content {
+    flex-direction: column;
+  }
+
+  .json-viewer-container {
+    border-right: none;
+    border-bottom: 1px solid var(--color-gray-200);
+  }
+
+  .json-viewer-container:last-child {
+    border-bottom: none;
+  }
+}

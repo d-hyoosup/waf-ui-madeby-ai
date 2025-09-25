@@ -2,8 +2,8 @@
 import { useState } from 'react';
 import './TableStyles.css';
 import './FormStyles.css';
+import { AWS_REGIONS } from '../constants/awsRegions';
 
-// ✅ [수정] 데이터 구조를 AllRegionsSettingsTab과 일치시킴
 interface Setting {
   id: string;
   account: string;
@@ -14,53 +14,67 @@ interface Setting {
   backupType: '자동백업' | '수동백업';
 }
 
-// ✅ [추가] 리전 이름 매칭을 위한 데이터
-const awsRegions = [
-    { code: "us-east-1", name: "US East (N. Virginia)" },
-    { code: "us-east-2", name: "US East (Ohio)" },
-    { code: "ap-northeast-2", name: "Asia Pacific (Seoul)" },
-    { code: "Global", name: "Global" }, // Global 케이스 추가
-];
-
-// ✅ [수정] 목업 데이터에 scope, regionName 값 추가
 const initialSettings: Setting[] = [
-    { id: 'setting-1', account: '123456789012', regionCode: 'us-east-1', regionName: 'US East (N. Virginia)', scope: 'REGIONAL', isManaged: false, backupType: '수동백업' },
-    { id: 'setting-2', account: '123456789012', regionCode: 'us-east-2', regionName: 'US East (Ohio)', scope: 'REGIONAL', isManaged: true, backupType: '자동백업' },
-    { id: 'setting-3', account: '987654321098', regionCode: 'Global', regionName: 'Global', scope: 'CLOUDFRONT', isManaged: true, backupType: '수동백업' },
+    {
+        id: 'setting-1',
+        account: '123456789012',
+        regionCode: 'us-east-1',
+        regionName: '버지니아 북부 (us-east-1)',
+        scope: 'REGIONAL',
+        isManaged: false,
+        backupType: '수동백업'
+    },
+    {
+        id: 'setting-2',
+        account: '123456789012',
+        regionCode: 'us-east-2',
+        regionName: '오하이오 (us-east-2)',
+        scope: 'REGIONAL',
+        isManaged: true,
+        backupType: '자동백업'
+    },
+    {
+        id: 'setting-3',
+        account: '987654321098',
+        regionCode: 'aws-global',
+        regionName: '글로벌 (CloudFront)',
+        scope: 'CLOUDFRONT',
+        isManaged: true,
+        backupType: '수동백업'
+    },
 ];
 
 const AddSettingForm = () => (
-    <div className="setting-add-form improved-form">
-        <h4>관리 설정 추가</h4>
+    <div className="setting-add-form improved-form" style={{ opacity: 0.5, pointerEvents: 'none' }}>
+        <h4>관리 설정 추가 (비활성화)</h4>
         <div className="form-controls">
             <div className="form-group">
                 <label>계정</label>
-                <select defaultValue="123456789012">
+                <select defaultValue="123456789012" disabled>
                     <option>123456789012</option>
                     <option>987654321098</option>
                 </select>
             </div>
             <div className="form-group">
                 <label>리전</label>
-                {/* ✅ [수정] 리전 선택지를 전체 목록으로 변경 */}
-                <select defaultValue="us-east-1">
-                    {awsRegions.map(region => (
+                <select defaultValue="us-east-1" disabled>
+                    {AWS_REGIONS.map(region => (
                       <option key={region.code} value={region.code}>
-                        {`${region.name} (${region.code})`}
+                        {region.name}
                       </option>
                     ))}
                 </select>
             </div>
             <div className="form-group">
                 <label>영역</label>
-                <select defaultValue="REGIONAL">
+                <select defaultValue="REGIONAL" disabled>
                     <option>REGIONAL</option>
                     <option>CLOUDFRONT</option>
                 </select>
             </div>
             <div className="form-group">
                 <label>&nbsp;</label>
-                <button type="button" className="btn btn-primary">추가</button>
+                <button type="button" className="btn btn-primary" disabled>추가</button>
             </div>
         </div>
     </div>
@@ -70,25 +84,19 @@ const ManagementSettingsTabContent = () => {
   const [settings, setSettings] = useState<Setting[]>(initialSettings);
 
   const handleToggleManaged = (id: string) => {
-    setSettings(
-      settings.map(s =>
-        s.id === id ? { ...s, isManaged: !s.isManaged } : s
-      )
-    );
+    // 비활성화 상태이므로 동작하지 않음
+    return;
   };
 
   const handleBackupTypeChange = (id: string, newBackupType: '자동백업' | '수동백업') => {
-    setSettings(
-      settings.map(s =>
-        s.id === id ? { ...s, backupType: newBackupType } : s
-      )
-    );
+    // 비활성화 상태이므로 동작하지 않음
+    return;
   };
 
   return (
     <>
       <AddSettingForm />
-      <div className="table-container" style={{ marginTop: '20px' }}>
+      <div className="table-container" style={{ marginTop: '20px', opacity: 0.5, pointerEvents: 'none' }}>
         <table className="data-table">
           <thead>
             <tr>
@@ -103,8 +111,7 @@ const ManagementSettingsTabContent = () => {
             {settings.map((s) => (
               <tr key={s.id}>
                 <td>{s.account}</td>
-                {/* ✅ [수정] 리전명과 리전 코드를 함께 표시 */}
-                <td>{`${s.regionName} (${s.regionCode})`}</td>
+                <td>{s.regionName}</td>
                 <td>{s.scope}</td>
                 <td>
                   <label className="toggle-switch">
@@ -112,6 +119,7 @@ const ManagementSettingsTabContent = () => {
                       type="checkbox"
                       checked={s.isManaged}
                       onChange={() => handleToggleManaged(s.id)}
+                      disabled
                     />
                     <span className="slider"></span>
                   </label>
@@ -124,7 +132,7 @@ const ManagementSettingsTabContent = () => {
                         name={`backupType-${s.id}`}
                         value="자동백업"
                         checked={s.backupType === '자동백업'}
-                        disabled={!s.isManaged}
+                        disabled
                         onChange={() => handleBackupTypeChange(s.id, '자동백업')}
                       />
                       자동백업
@@ -135,7 +143,7 @@ const ManagementSettingsTabContent = () => {
                         name={`backupType-${s.id}`}
                         value="수동백업"
                         checked={s.backupType === '수동백업'}
-                        disabled={!s.isManaged}
+                        disabled
                         onChange={() => handleBackupTypeChange(s.id, '수동백업')}
                       />
                       수동백업
@@ -146,6 +154,16 @@ const ManagementSettingsTabContent = () => {
             ))}
           </tbody>
         </table>
+      </div>
+      <div style={{
+        marginTop: '20px',
+        padding: '15px',
+        background: '#fff3cd',
+        border: '1px solid #ffc107',
+        borderRadius: '8px',
+        color: '#856404'
+      }}>
+        <strong>안내:</strong> 개별 관리 설정 기능은 현재 비활성화 상태입니다. 전체 리전 설정 탭을 이용해주세요.
       </div>
     </>
   );

@@ -1,25 +1,8 @@
 // src/components/RestoreStatusModal.tsx
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import type { RestoreData, JiraIssue } from '../types/restore.types';
 import './RestoreStatusModal.css';
 import { ExternalLinkIcon } from './Icons';
-
-interface JiraIssue {
-    issueKey: string;
-    link: string;
-    interruptFlag: 'CANCEL' | 'FORCE_APPROVED' | 'NONE' | string;
-}
-
-interface RestoreData {
-    snapshotId: string;
-    accountId: string;
-    accountName: string;
-    regionCode: string;
-    regionName: string;
-    scope: string;
-    tagName: string;
-    status: 'NONE' | 'REQUESTED' | 'WAITING_FOR_APPROVAL' | 'PROCESSING' | 'COMPLETED';
-    issues: JiraIssue[];
-}
 
 interface RestoreStatusModalProps {
     onClose: () => void;
@@ -27,10 +10,23 @@ interface RestoreStatusModalProps {
 }
 
 const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({ onClose, data }) => {
-    const [showEmergencyApproval, setShowEmergencyApproval] = useState(false);
+    const [showEmergencyApproval, setShowEmergencyApproval] = useState(data.showEmergencyApproval || false);
+    const [showCancelProcess, setShowCancelProcess] = useState(data.showCancelProcess || false);
     const [emergencyStep, setEmergencyStep] = useState<'request' | 'submit'>('request');
     const [issuedToken, setIssuedToken] = useState<string>('');
     const [inputToken, setInputToken] = useState<string>('');
+    const [cancelStep, setCancelStep] = useState<'confirm' | 'processing' | 'completed'>('confirm');
+
+    // 초기 상태 설정
+    useEffect(() => {
+        if (data.showEmergencyApproval) {
+            setShowEmergencyApproval(true);
+            setEmergencyStep('request');
+        } else if (data.showCancelProcess) {
+            setShowCancelProcess(true);
+            setCancelStep('confirm');
+        }
+    }, [data.showEmergencyApproval, data.showCancelProcess]);
 
     const getFlagBadgeClass = (flag: JiraIssue['interruptFlag']) => {
         switch (flag) {
@@ -113,9 +109,75 @@ const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({ onClose, data }
         setEmergencyStep('request');
     };
 
+    const handleCancelRestore = () => {
+        setCancelStep('processing');
+        setTimeout(() => {
+            setCancelStep('completed');
+            setTimeout(() => {
+                alert('복원이 취소되었습니다.');
+                onClose();
+            }, 1500);
+        }, 2000);
+    };
+
+    const handleCancelAbort = () => {
+        setShowCancelProcess(false);
+        setCancelStep('confirm');
+    };
+
     const getModalTitle = () => {
-        if (!showEmergencyApproval) return 'WAF Rule 복원 작업 상태';
-        return emergencyStep === 'request' ? '긴급 승인 (1/2) - 토큰 발급' : '긴급 승인 (2/2) - 승인 요청';
+        if (showEmergencyApproval) {
+            return emergencyStep === 'request' ? '긴급 승인 (1/2) - 토큰 발급' : '긴급 승인 (2/2) - 승인 요청';
+        }
+        if (showCancelProcess) {
+            return '복원 취소';
+        }
+        return 'WAF Rule 복원 작업 상태';
+    };
+
+    // 복원 취소 프로세스 렌더링
+    const renderCancelProcess = () => {
+        if (cancelStep === 'confirm') {
+            return (
+                <>
+                    <div className="cancel-confirmation">
+                        <div className="warning-message">
+                            <div className="warning-icon">⚠️</div>
+                            <div className="warning-text">
+                                <strong>복원 취소 확인</strong>
+                                <p>진행 중인 WAF Rule 복원 작업을 취소하시겠습니까?</p>
+                                <ul>
+                                    <li>현재까지 진행된 복원 작업이 롤백됩니다</li>
+                                    <li>Jira 이슈가 '취소됨' 상태로 변경됩니다</li>
+                                    <li>이 작업은 되돌릴 수 없습니다</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div className="restore-info-box">
+                            <div><span>Account ID</span> {data.accountId}</div>
+                            <div><span>Region</span> {data.regionName} ({data.regionCode})</div>
+                            <div><span>Tag</span> {data.tagName}</div>
+                        </div>
+                    </div>
+                </>
+            );
+        } else if (cancelStep === 'processing') {
+            return (
+                <div className="cancel-processing">
+                    <div className="processing-spinner"></div>
+                    <h4>복원 취소 처리중...</h4>
+                    <p>WAF Rule 복원 작업을 취소하고 있습니다.</p>
+                </div>
+            );
+        } else if (cancelStep === 'completed') {
+            return (
+                <div className="cancel-completed">
+                    <div className="success-icon">✅</div>
+                    <h4>복원 취소 완료</h4>
+                    <p>WAF Rule 복원 작업이 성공적으로 취소되었습니다.</p>
+                </div>
+            );
+        }
     };
 
     return (
@@ -126,7 +188,9 @@ const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({ onClose, data }
                     <button className="close-button" onClick={onClose}>&times;</button>
                 </header>
                 <main className="modal-body">
-                    {!showEmergencyApproval ? (
+                    {showCancelProcess ? (
+                        renderCancelProcess()
+                    ) : !showEmergencyApproval ? (
                         <>
                             <div className="restore-info-box">
                                 <div><span>Account ID</span> {data.accountId}</div>
@@ -145,7 +209,7 @@ const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({ onClose, data }
                                     return (
                                         <div key={stepNumber} className={`step ${statusClass}`}>
                                             <div className="step-icon">
-                                                {statusClass === 'completed' ? '✓' : stepNumber}
+                                                {statusClass === 'completed' ? '✔' : stepNumber}
                                             </div>
                                             <div className="step-label">{label}</div>
                                         </div>
@@ -171,7 +235,7 @@ const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({ onClose, data }
                             </div>
 
                             <div className="restore-actions">
-                                <button className="btn btn-secondary">복원 취소</button>
+                                <button className="btn btn-secondary" onClick={() => setShowCancelProcess(true)}>복원 취소</button>
                                 <button className="btn btn-danger" onClick={handleEmergencyApprovalClick}>긴급 승인</button>
                             </div>
 
@@ -209,8 +273,17 @@ const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({ onClose, data }
                     )}
                 </main>
                 <footer className="modal-footer" style={{ justifyContent: 'flex-end' }}>
-                    {!showEmergencyApproval ? (
-                        <button className="btn btn-primary">새로고림</button>
+                    {showCancelProcess ? (
+                        cancelStep === 'confirm' ? (
+                            <>
+                                <button className="btn btn-secondary" onClick={handleCancelAbort}>취소</button>
+                                <button className="btn btn-danger" onClick={handleCancelRestore}>복원 취소 확인</button>
+                            </>
+                        ) : (
+                            <button className="btn btn-primary" onClick={onClose}>닫기</button>
+                        )
+                    ) : !showEmergencyApproval ? (
+                        <button className="btn btn-primary">새로고침</button>
                     ) : emergencyStep === 'request' ? (
                         <>
                             <button className="btn btn-secondary" onClick={handleCancelEmergency}>취소</button>

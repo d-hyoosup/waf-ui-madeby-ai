@@ -1,0 +1,81 @@
+/* src/components/FilterStyles.css - 필터 컴포넌트 스타일 */
+
+.settings-tab-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+}
+
+.filter-container {
+  display: flex;
+  gap: var(--spacing-3);
+  align-items: flex-end;
+  padding: var(--spacing-4);
+  background: linear-gradient(135deg, var(--color-gray-50) 0%, var(--color-white) 100%);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+  flex-wrap: wrap;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  min-width: 150px;
+  flex: 1;
+  max-width: 250px;
+}
+
+.filter-group label {
+  font-size: var(--text-sm);
+  font-weight: var(--font-semibold);
+  color: var(--color-gray-700);
+  margin-bottom: 0;
+}
+
+.filter-group select {
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  color: var(--color-gray-900);
+  background: var(--color-white);
+  transition: var(--transition-base);
+  min-height: 38px;
+  cursor: pointer;
+}
+
+.filter-group select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-100);
+}
+
+.filter-group select:hover {
+  border-color: var(--color-gray-400);
+}
+
+.filter-reset {
+  align-self: flex-end;
+  white-space: nowrap;
+  padding: var(--spacing-2) var(--spacing-4);
+  min-height: 38px;
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+  .filter-container {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-group {
+    max-width: 100%;
+  }
+
+  .filter-reset {
+    width: 100%;
+    margin-top: var(--spacing-2);
+  }
+}

@@ -1,37 +1,34 @@
+// src/components/BackupHistoryTable.tsx
 import React, { useMemo } from 'react';
 import './TableStyles.css';
 import { ExternalLinkIcon } from './Icons';
-
-// 업데이트된 데이터 구조
-const backupData = [
-    { id: '20250112-150430', account: '123456789012', region: 'Global(CloudFront)', type: '수동', status: '적용중', jiraIssue: '' },
-    { id: '20241223-112030', account: '123456789012', region: 'Global(CloudFront)', type: '수동', status: '보관됨', jiraIssue: '' },
-    { id: '20241010-150530', account: '123456789012', region: 'Global(CloudFront)', type: '수동', status: '복원중', jiraIssue: 'GCI-GW-001' },
-    { id: '20240615-152230', account: '123456789012', region: 'ap-northeast-2', type: '수동', status: '보관됨', jiraIssue: '' },
-    { id: '20250915-152230', account: '123456789012', region: 'ap-northeast-2', type: '수동', status: '백업 필요', jiraIssue: '' },
-];
-
-// 통합된 상태 배지 스타일 결정 함수
-const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-        case '적용중': return 'badge-success';
-        case '보관됨': return 'badge-secondary';
-        case '복원중': return 'badge-restoring';
-        case '백업 필요': return 'badge-warning';
-        default: return 'badge-secondary';
-    }
-};
+import {
+    BackupItem,
+    getStatusBadgeClass,
+    getStatusText,
+    getRollbackStatusText,
+    getRollbackBadgeClass
+} from '../data/mockBackupData';
+import { getRegionDisplayName } from '../constants/awsRegions';
 
 interface BackupHistoryTableProps {
-  selectedItems: string[];
-  onSelectionChange: (newSelection: string[]) => void;
-  onJiraIssueClick: () => void;
+    data: BackupItem[];
+    selectedItems: string[];
+    onSelectionChange: (newSelection: string[]) => void;
+    onJiraIssueClick: (issueCount: number, backupId: string) => void;
+    onRestoreAction: (action: string, backupId: string) => void;
 }
 
-const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({ selectedItems, onSelectionChange, onJiraIssueClick }) => {
+const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
+    data,
+    selectedItems,
+    onSelectionChange,
+    onJiraIssueClick,
+    onRestoreAction
+}) => {
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
-            onSelectionChange(backupData.map(item => item.id));
+            onSelectionChange(data.map(item => item.id));
         } else {
             onSelectionChange([]);
         }
@@ -47,7 +44,10 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({ selectedItems, 
         onSelectionChange(newSelection);
     };
 
-    const isAllSelected = useMemo(() => backupData.length > 0 && selectedItems.length === backupData.length, [selectedItems]);
+    const isAllSelected = useMemo(() =>
+        data.length > 0 && selectedItems.length === data.length,
+        [selectedItems, data]
+    );
 
     return (
         <div className="table-container">
@@ -55,46 +55,105 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({ selectedItems, 
                 <thead>
                     <tr>
                         <th style={{ width: '50px' }}>
-                            <input type="checkbox" onChange={handleSelectAll} checked={isAllSelected} />
+                            <input
+                                type="checkbox"
+                                onChange={handleSelectAll}
+                                checked={isAllSelected}
+                            />
                         </th>
-                        <th style={{ width: '130px' }}>Account</th>
-                        <th style={{ width: '180px' }}>리전</th>
-                        <th style={{ width: '160px' }}>Tag (ID)</th>
-                        <th style={{ width: '100px' }}>백업 방식</th>
-                        <th style={{ width: '100px' }}>상태</th>
-                        <th style={{ width: '120px' }}>Jira 이슈</th>
+                        <th style={{ width: '120px' }}>Account</th>
+                        <th style={{ width: '200px' }}>리전</th>
+                        <th style={{ width: '140px' }}>Tag (ID)</th>
+                        <th style={{ width: '90px' }}>백업 방식</th>
+                        <th style={{ width: '90px' }}>상태</th>
+                        <th style={{ width: '150px' }}>Jira 이슈</th>
+                        <th style={{ width: '160px' }}>작업</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {backupData.map((item) => (
+                    {data.map((item) => (
                         <tr key={item.id} className={selectedItems.includes(item.id) ? 'selected' : ''}>
                             <td>
-                                <input type="checkbox" checked={selectedItems.includes(item.id)} onChange={() => handleSelectItem(item.id)} />
+                                <input
+                                    type="checkbox"
+                                    checked={selectedItems.includes(item.id)}
+                                    onChange={() => handleSelectItem(item.id)}
+                                />
                             </td>
                             <td>{item.account}</td>
-                            <td>{item.region}</td>
+                            <td>{getRegionDisplayName(item.region)}</td>
                             <td>
-                                <a href={`#gitlab-link-for-${item.id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                <a
+                                    href={`#gitlab-link-for-${item.id}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{ display: 'inline-flex', alignItems: 'center' }}
+                                >
                                     {item.id}
                                     <ExternalLinkIcon />
                                 </a>
                             </td>
                             <td>{item.type}</td>
                             <td>
-                                <span className={`badge ${getStatusBadgeClass(item.status)}`}>{item.status}</span>
+                                <span className={`badge ${getStatusBadgeClass(item.status)}`}>
+                                    {getStatusText(item.status)}
+                                </span>
                             </td>
                             <td>
-                                {item.jiraIssue && (
-                                    <a
-                                        href="#"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            onJiraIssueClick(item.issueCount || 1, item.id);
-                                        }}
-                                        className="jira-issue-link"
+                                {item.jiraIssues && item.jiraIssues.length > 0 && (
+                                    <div className="jira-issue-links">
+                                        {item.jiraIssues.map((issue, index) => (
+                                            <a
+                                                key={index}
+                                                href={`https://jira.example.com/browse/${issue}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="jira-issue-link"
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                {issue}
+                                                <ExternalLinkIcon />
+                                            </a>
+                                        ))}
+                                    </div>
+                                )}
+                            </td>
+                            <td>
+                                {item.status === 'ROLLBACK_INPROGRESS' && (
+                                    <div className="action-badges">
+                                        {item.rollbackStatus === 'JIRA_APPROVAL_WAITING' && (
+                                            <button
+                                                className={`badge-button ${getRollbackBadgeClass('JIRA_APPROVAL_WAITING')}`}
+                                                onClick={() => onRestoreAction('JIRA_APPROVAL_WAITING', item.id)}
+                                            >
+                                                {getRollbackStatusText('JIRA_APPROVAL_WAITING')}
+                                            </button>
+                                        )}
+                                        {item.rollbackStatus === 'ROLLBACK_CANCEL' && (
+                                            <button
+                                                className={`badge-button ${getRollbackBadgeClass('ROLLBACK_CANCEL')}`}
+                                                onClick={() => onRestoreAction('ROLLBACK_CANCEL', item.id)}
+                                            >
+                                                {getRollbackStatusText('ROLLBACK_CANCEL')}
+                                            </button>
+                                        )}
+                                        {item.rollbackStatus === 'VIEW_DETAIL' && (
+                                            <button
+                                                className={`badge-button ${getRollbackBadgeClass('VIEW_DETAIL')}`}
+                                                onClick={() => onRestoreAction('VIEW_DETAIL', item.id)}
+                                            >
+                                                {getRollbackStatusText('VIEW_DETAIL')}
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                                {item.status === 'ROLLBACK_WAIT_FOR_APPLY' && item.rollbackStatus && (
+                                    <button
+                                        className={`badge-button ${getRollbackBadgeClass(item.rollbackStatus)}`}
+                                        onClick={() => onRestoreAction(item.rollbackStatus, item.id)}
                                     >
-                                        {(item.issueCount && item.issueCount > 1) ? `${item.issueCount}개 이슈` : item.jiraIssue}
-                                    </a>
+                                        {getRollbackStatusText(item.rollbackStatus)}
+                                    </button>
                                 )}
                             </td>
                         </tr>

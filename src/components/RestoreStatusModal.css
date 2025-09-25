@@ -175,7 +175,6 @@
   font-weight: var(--font-normal);
   line-height: var(--leading-relaxed);
 }
-
 /* 긴급 승인 관련 스타일 */
 .emergency-approval-container {
   padding: var(--spacing-6) 0;
@@ -192,6 +191,92 @@
   font-size: var(--text-sm);
 }
 
+/* 복원 취소 관련 스타일 */
+.cancel-confirmation {
+  padding: var(--spacing-4) 0;
+}
+
+.cancel-processing,
+.cancel-completed {
+  text-align: center;
+  padding: var(--spacing-8) var(--spacing-4);
+}
+
+.processing-spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid var(--color-gray-200);
+  border-top-color: var(--color-danger);
+  border-radius: 50%;
+  margin: 0 auto var(--spacing-4);
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.cancel-processing h4,
+.cancel-completed h4 {
+  font-size: var(--text-lg);
+  font-weight: var(--font-semibold);
+  color: var(--color-gray-800);
+  margin-bottom: var(--spacing-2);
+}
+
+.cancel-processing p,
+.cancel-completed p {
+  color: var(--color-gray-600);
+  font-size: var(--text-sm);
+}
+
+.success-icon {
+  font-size: 48px;
+  color: var(--color-success);
+  margin-bottom: var(--spacing-3);
+}
+
+.warning-message {
+  background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+  border: 1px solid #f59e0b;
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+  display: flex;
+  gap: var(--spacing-3);
+}
+
+.warning-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.warning-text {
+  flex: 1;
+}
+
+.warning-text strong {
+  display: block;
+  margin-bottom: var(--spacing-2);
+  color: var(--color-gray-900);
+  font-size: var(--text-base);
+}
+
+.warning-text p {
+  margin-bottom: var(--spacing-2);
+  color: var(--color-gray-700);
+  font-size: var(--text-sm);
+}
+
+.warning-text ul {
+  margin: var(--spacing-2) 0 0 var(--spacing-4);
+  color: var(--color-gray-700);
+  font-size: var(--text-sm);
+}
+
+.warning-text ul li {
+  margin-bottom: var(--spacing-1);
+}
 .token-display-box {
   background-color: var(--color-gray-50);
   border: 2px solid var(--color-gray-200);

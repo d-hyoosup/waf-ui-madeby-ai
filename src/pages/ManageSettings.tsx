@@ -9,7 +9,7 @@ import './PageStyles.css';
 
 const ManageSettings = () => {
   const location = useLocation();
-  const defaultTab = location.state?.defaultTab || 'individual';
+  const defaultTab = location.state?.defaultTab || 'allRegions';
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   return (
@@ -22,12 +22,12 @@ const ManageSettings = () => {
         >
           전체 리전 설정
         </button>
-        <button
-          className={`tab-button ${activeTab === 'individual' ? 'active' : ''}`}
-          onClick={() => setActiveTab('individual')}
-        >
-          개별 관리 설정
-        </button>
+        {/*<button*/}
+        {/*  className={`tab-button ${activeTab === 'individual' ? 'active' : ''}`}*/}
+        {/*  onClick={() => setActiveTab('individual')}*/}
+        {/*>*/}
+        {/*  개별 관리 설정*/}
+        {/*</button>*/}
         <button
           className={`tab-button ${activeTab === 'alert' ? 'active' : ''}`}
           onClick={() => setActiveTab('alert')}
@@ -38,7 +38,7 @@ const ManageSettings = () => {
 
       <div className="main-content-area">
         {activeTab === 'allRegions' && <AllRegionsSettingsTab />}
-        {activeTab === 'individual' && <ManagementSettingsTabContent />}
+        {/*{activeTab === 'individual' && <ManagementSettingsTabContent />}*/}
         {activeTab === 'alert' && <AlertSettingsTabContent />}
       </div>
     </PageContainer>

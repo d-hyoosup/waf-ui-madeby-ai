@@ -1,59 +1,60 @@
-import { useState } from 'react';
+// src/pages/BackupRestore.tsx
+import { useState, useMemo } from 'react';
 import PageContainer from '../components/PageContainer';
 import BackupHistoryTable from '../components/BackupHistoryTable';
-import SnapshotDetailModal from '../components/SnapshotDetailModal';
+import ResourceViewModal from '../components/ResourceViewModal';
 import RestoreStatusModal from '../components/RestoreStatusModal';
-import RuleCompareModal from '../components/RuleCompareModal';
 import JiraDetailModal from '../components/JiraDetailModal';
-
-// BackupItem interface를 여기서 직접 정의
-interface BackupItem {
-    id: string;
-    account: string;
-    region: string;
-    type: string;
-    status: string;
-    jiraIssue: string;
-    issueCount: number;
-}
-
-const backupData: BackupItem[] = [
-    { id: '20250112-150430', account: '123456789012', region: 'Global(CloudFront)', type: '수동', status: '적용중', jiraIssue: '', issueCount: 0 },
-    { id: '20241223-112030', account: '123456789012', region: 'Global(CloudFront)', type: '수동', status: '보관됨', jiraIssue: '', issueCount: 0 },
-    { id: '20241010-150530', account: '123456789012', region: 'Global(CloudFront)', type: '수동', status: '복원중', jiraIssue: 'GCI-GW-001', issueCount: 2 },
-    { id: '20240615-152230', account: '123456789012', region: 'ap-northeast-2', type: '수동', status: '보관됨', jiraIssue: 'GCI-GW-002', issueCount: 1 },
-    { id: '20250915-152230', account: '123456789012', region: 'ap-northeast-2', type: '수동', status: '백업 필요', jiraIssue: '', issueCount: 0 },
-];
-
-interface JiraIssue {
-    issueKey: string;
-    link: string;
-    interruptFlag: 'CANCEL' | 'FORCE_APPROVED' | string;
-}
-
-interface RestoreData {
-    snapshotId: string;
-    accountId: string;
-    accountName: string;
-    regionCode: string;
-    regionName: string;
-    scope: string;
-    tagName: string;
-    status: 'NONE' | 'REQUESTED' | 'WAITING_FOR_APPROVAL' | 'PROCESSING' | 'COMPLETED';
-    issues: JiraIssue[];
-}
+import type { RestoreData, JiraIssue } from '../types/restore.types';
+import { mockBackupData, type BackupItem } from '../data/mockBackupData';
+import { AWS_REGIONS } from '../constants/awsRegions';
+import '../components/FilterStyles.css';
 
 const BackupRestore = () => {
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
-    const [snapshotModal, setSnapshotModal] = useState<{ type: 'view' | 'compare' | 'restore' | null; items: string[] }>({ type: null, items: [] });
-    const [compareModalOpen, setCompareModalOpen] = useState(false);
+    const [resourceViewModal, setResourceViewModal] = useState<{
+        type: 'view' | 'compare' | null;
+        items: string[]
+    }>({ type: null, items: [] });
     const [restoreModalOpen, setRestoreModalOpen] = useState(false);
     const [restoreProcessData, setRestoreProcessData] = useState<RestoreData | null>(null);
-    const [jiraDetailModal, setJiraDetailModal] = useState<{ isOpen: boolean; issueCount: number; backupId: string }>({
+    const [jiraDetailModal, setJiraDetailModal] = useState<{
+        isOpen: boolean;
+        issueCount: number;
+        backupId: string
+    }>({
         isOpen: false,
         issueCount: 0,
         backupId: ''
     });
+
+    // 필터 상태
+    const [filters, setFilters] = useState({
+        account: '',
+        region: '',
+        backupType: ''
+    });
+
+    // 필터링된 데이터
+    const filteredData = useMemo(() => {
+        return mockBackupData.filter((item: BackupItem) => {
+            if (filters.account && item.account !== filters.account) return false;
+            if (filters.region && item.region !== filters.region) return false;
+            if (filters.backupType && item.type !== filters.backupType) return false;
+            return true;
+        });
+    }, [filters]);
+
+    // 유니크한 계정과 리전 목록
+    const uniqueAccounts = useMemo(() =>
+        [...new Set(mockBackupData.map(item => item.account))],
+        []
+    );
+
+    const uniqueRegions = useMemo(() =>
+        [...new Set(mockBackupData.map(item => item.region))],
+        []
+    );
 
     const handleSelectionChange = (newSelection: string[]) => {
         setSelectedItems(newSelection);
@@ -61,22 +62,39 @@ const BackupRestore = () => {
 
     const numSelected = selectedItems.length;
 
-    const isManualBackupEnabled = () => {
-        if (numSelected !== 1) {
-            return false;
+    // 백업 조회 버튼 클릭
+    const handleViewClick = () => {
+        if (numSelected === 1) {
+            setResourceViewModal({ type: 'view', items: selectedItems });
         }
-        const selectedItem = backupData.find(item => item.id === selectedItems[0]);
-        return selectedItem?.status === '백업 필요';
     };
 
-    const handleCurrentRuleCompare = () => {
-        if (numSelected === 1) {
-            setCompareModalOpen(true);
+    // 비교 버튼 클릭 (통합)
+    const handleCompareClick = () => {
+        if (numSelected === 1 || numSelected === 2) {
+            setResourceViewModal({ type: 'compare', items: selectedItems });
         }
+    };
+
+    // 수동 백업 버튼 클릭 - 현재 룰과 비교 기능 표시
+    const handleManualBackupClick = () => {
+        // 수동 백업 시 현재 룰과 비교 화면 표시
+        setResourceViewModal({ type: 'compare', items: ['current'] });
     };
 
     const handleJiraIssueClick = (issueCount: number, backupId: string) => {
-        const mockIssues: JiraIssue[] = Array.from({ length: issueCount }, (_, i) => ({
+        setJiraDetailModal({
+            isOpen: true,
+            issueCount: issueCount,
+            backupId: backupId
+        });
+    };
+
+    const handleRestoreAction = (action: string, backupId: string) => {
+        const backup = mockBackupData.find(item => item.id === backupId);
+        if (!backup) return;
+
+        const mockIssues: JiraIssue[] = Array.from({ length: backup.issueCount || 1 }, (_, i) => ({
             issueKey: `GCI-${51 + i}`,
             link: `https://jira.example.com/browse/GCI-${51 + i}`,
             interruptFlag: "NONE"
@@ -84,18 +102,33 @@ const BackupRestore = () => {
 
         const mockRestoreData: RestoreData = {
             snapshotId: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
-            accountId: "123456789012",
+            accountId: backup.account,
             accountName: "HAE_Manager",
-            regionCode: "ap-northeast-2",
-            regionName: "아시아 태평양(서울)",
-            scope: "REGIONAL",
+            regionCode: backup.region,
+            regionName: AWS_REGIONS.find(r => r.code === backup.region)?.name || backup.region,
+            scope: backup.region === 'aws-global' ? 'CLOUDFRONT' : 'REGIONAL',
             tagName: backupId,
             status: "WAITING_FOR_APPROVAL",
             issues: mockIssues,
         };
 
-        setRestoreProcessData(mockRestoreData);
-        setRestoreModalOpen(true);
+        if (action === 'JIRA_APPROVAL_WAITING') {
+            // Jira 승인 대기 - 긴급 승인 확인
+            if (window.confirm('긴급 승인을 하시겠습니까?\n\n긴급 승인 시 Jira 이슈의 승인 절차를 무시하고 즉시 복원이 진행됩니다.')) {
+                setRestoreProcessData({ ...mockRestoreData, showEmergencyApproval: true });
+                setRestoreModalOpen(true);
+            }
+        } else if (action === 'ROLLBACK_CANCEL') {
+            // 복원 취소 확인
+            if (window.confirm('복원을 취소하시겠습니까?\n\n진행 중인 복원 작업이 중단됩니다.')) {
+                setRestoreProcessData({ ...mockRestoreData, showCancelProcess: true });
+                setRestoreModalOpen(true);
+            }
+        } else if (action === 'VIEW_DETAIL') {
+            // 상세 보기 - WAF Rule 복원 작업 상태 모달
+            setRestoreProcessData(mockRestoreData);
+            setRestoreModalOpen(true);
+        }
     };
 
     return (
@@ -104,56 +137,95 @@ const BackupRestore = () => {
             controls={
                 <div className="controls-group">
                     {numSelected === 1 && (
-                        <>
-                            <button
-                                className="btn btn-secondary"
-                                onClick={() => setSnapshotModal({ type: 'view', items: selectedItems })}
-                            >
-                                백업 조회
-                            </button>
-                            <button
-                                className="btn btn-secondary"
-                                onClick={handleCurrentRuleCompare}
-                            >
-                                현재 룰과 비교
-                            </button>
-                        </>
+                        <button
+                            className="btn btn-secondary"
+                            onClick={handleViewClick}
+                        >
+                            백업 조회
+                        </button>
                     )}
-                     <button
+                    <button
                         className="btn btn-secondary"
-                        disabled={numSelected !== 2}
-                        onClick={() => setSnapshotModal({ type: 'compare', items: selectedItems })}
+                        disabled={numSelected === 0 || numSelected > 2}
+                        onClick={handleCompareClick}
                     >
-                        백업 간 비교
+                        비교
                     </button>
                     <button
                         className="btn btn-primary"
-                        disabled={!isManualBackupEnabled()}
+                        onClick={handleManualBackupClick}
                     >
                         수동백업
                     </button>
                 </div>
             }
         >
+            {/* 필터 영역 */}
+            <div className="filter-container">
+                <div className="filter-group">
+                    <label>Account</label>
+                    <select
+                        value={filters.account}
+                        onChange={(e) => setFilters({...filters, account: e.target.value})}
+                    >
+                        <option value="">전체</option>
+                        {uniqueAccounts.map(account => (
+                            <option key={account} value={account}>{account}</option>
+                        ))}
+                    </select>
+                </div>
+
+                <div className="filter-group">
+                    <label>Region</label>
+                    <select
+                        value={filters.region}
+                        onChange={(e) => setFilters({...filters, region: e.target.value})}
+                    >
+                        <option value="">전체</option>
+                        {uniqueRegions.map(region => {
+                            const regionInfo = AWS_REGIONS.find(r => r.code === region);
+                            return (
+                                <option key={region} value={region}>
+                                    {regionInfo ? regionInfo.name : region}
+                                </option>
+                            );
+                        })}
+                    </select>
+                </div>
+
+                <div className="filter-group">
+                    <label>백업 방식</label>
+                    <select
+                        value={filters.backupType}
+                        onChange={(e) => setFilters({...filters, backupType: e.target.value})}
+                    >
+                        <option value="">전체</option>
+                        <option value="자동백업">자동백업</option>
+                        <option value="수동백업">수동백업</option>
+                    </select>
+                </div>
+
+                <button
+                    className="btn btn-secondary filter-reset"
+                    onClick={() => setFilters({ account: '', region: '', backupType: '' })}
+                >
+                    필터 초기화
+                </button>
+            </div>
+
             <BackupHistoryTable
-                data={backupData}
+                data={filteredData}
                 selectedItems={selectedItems}
                 onSelectionChange={handleSelectionChange}
                 onJiraIssueClick={handleJiraIssueClick}
+                onRestoreAction={handleRestoreAction}
             />
 
-            {snapshotModal.type && (
-                <SnapshotDetailModal
-                    type={snapshotModal.type}
-                    items={snapshotModal.items}
-                    onClose={() => setSnapshotModal({ type: null, items: [] })}
-                />
-            )}
-
-            {compareModalOpen && (
-                <RuleCompareModal
-                    selectedBackup={selectedItems[0]}
-                    onClose={() => setCompareModalOpen(false)}
+            {resourceViewModal.type && (
+                <ResourceViewModal
+                    type={resourceViewModal.type}
+                    items={resourceViewModal.items}
+                    onClose={() => setResourceViewModal({ type: null, items: [] })}
                 />
             )}
 

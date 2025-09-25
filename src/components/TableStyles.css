@@ -79,7 +79,6 @@
 .data-table tbody tr:last-child td {
   border-bottom: none;
 }
-
 /* 링크 스타일 */
 .data-table td a {
   color: var(--color-primary);
@@ -94,6 +93,26 @@
 .data-table td a:hover {
   color: var(--color-primary-dark);
   text-decoration: underline;
+}
+
+/* Jira 이슈 링크 그룹 */
+.jira-issue-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+.jira-issue-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: 2px 6px;
+  border-radius: var(--radius-base);
+  transition: var(--transition-base);
+}
+
+.jira-issue-link:hover {
+  background-color: var(--color-primary-50);
 }
 
 /* 체크박스 스타일 */
