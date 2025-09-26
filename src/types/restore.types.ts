@@ -21,3 +21,18 @@ export interface RestoreData {
   showEmergencyApproval?: boolean;
   showCancelProcess?: boolean;
 }
+
+// ✅ [수정] BackupStatus 타입 업데이트
+export type BackupStatus = 'INIT' | 'APPLIED' | 'ARCHIVED' | 'ROLLBACK_WAIT_FOR_APPLY' | 'ROLLBACK_INPROGRESS';
+
+export interface BackupItem {
+  id: string;
+  account: string;
+  region: string;
+  type: '자동백업' | '수동백업';
+  status: BackupStatus;
+  jiraIssues?: string[];
+  issueCount: number;
+  rollbackStatus?: 'JIRA_APPROVAL_WAITING' | 'ROLLBACK_CANCEL' | 'VIEW_DETAIL';
+  requiresManualBackup?: boolean;
+}

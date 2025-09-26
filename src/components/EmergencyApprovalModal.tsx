@@ -4,81 +4,100 @@ import './ModalStyles.css';
 
 interface EmergencyApprovalModalProps {
   onClose: () => void;
+  onConfirm: (approver: string, reason: string) => void;
+  backupId: string;
 }
 
-const EmergencyApprovalModal: React.FC<EmergencyApprovalModalProps> = ({ onClose }) => {
-  const [step, setStep] = useState<'request' | 'submit'>('request');
-  const [issuedToken, setIssuedToken] = useState<string>('');
-  const [inputToken, setInputToken] = useState<string>('');
+const EmergencyApprovalModal: React.FC<EmergencyApprovalModalProps> = ({
+  onClose,
+  onConfirm,
+  backupId
+}) => {
+  const [approver, setApprover] = useState('');
+  const [reason, setReason] = useState('');
 
-  // 1단계: 토큰 발급 요청 처리
-  const handleRequestToken = () => {
-    // 실제로는 API를 통해 토큰을 받아옵니다. 여기서는 6자리 랜덤 숫자를 생성합니다.
-    const newToken = '262a0ff4-70a4-4e05-8381-de3096f41527';
-    setIssuedToken(newToken);
-    setStep('submit'); // 2단계(입력/제출)로 전환
-  };
-
-  // 2단계: 긴급 승인 최종 요청 처리
-  const handleSubmitApproval = () => {
-    if (inputToken === issuedToken) {
-      alert('긴급 승인이 성공적으로 요청되었습니다.');
-      onClose(); // 성공 시 모달 닫기
-    } else {
-      alert('토큰이 일치하지 않습니다. 다시 확인해 주세요.');
+  const handleEmergencyRestore = () => {
+    if (!approver.trim() || !reason.trim()) {
+      alert('승인자와 사유를 모두 입력해주세요.');
+      return;
     }
+    onConfirm(approver, reason);
+    onClose();
   };
+
+  const isFormValid = approver.trim().length > 0 && reason.trim().length > 0;
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content small-modal">
+      <div className="modal-content emergency-modal">
         <header className="modal-header">
-          <h3>{step === 'request' ? '토큰 발급 요청' : '긴급 승인 요청'}</h3>
+          <h3>⚠️ 긴급 복원 승인</h3>
           <button className="close-button" onClick={onClose}>&times;</button>
         </header>
 
         <main className="modal-body">
-          {step === 'request' && (
-            <div className="approval-step-container">
-              <p>긴급 승인을 진행하려면 일회용 토큰이 필요합니다. 아래 버튼을 눌러 토큰을 발급받으세요.</p>
-            </div>
-          )}
+          <div className="emergency-warning-container">
+            {/*<div className="warning-icon">⚠️</div>*/}
+            <div className="warning-content">
+              {/*<h4>긴급 복원 실행 경고</h4>*/}
+              <p>
+                <strong>Tag name: {backupId}</strong>를 긴급 복원하려고 합니다.
+              </p>
+              <div className="warning-list">
+                <p><strong>다음 사항을 반드시 확인하세요:</strong></p>
+                <ul>
+                  <li>정상적인 Jira 승인 절차가 생략됩니다</li>
+                  {/*<li>현재 적용 중인 WAF 규칙이 즉시 변경됩니다</li>*/}
+                  <li>서비스에 영향을 줄 수 있는 중요한 작업입니다</li>
+                  {/*<li>복원 후 되돌리기가 어려울 수 있습니다</li>*/}
+                  {/*<li>모든 책임은 승인자에게 있습니다</li>*/}
+                </ul>
+              </div>
 
-          {step === 'submit' && (
-            <div className="approval-step-container">
-              <div className="token-display-box">
-                <strong>발급된 토큰:</strong>
-                <span className="token-value">{issuedToken}</span>
+              <div className="approval-form">
+                <div className="form-group">
+                  <label htmlFor="approver">승인자 *</label>
+                  <input
+                    id="approver"
+                    type="text"
+                    value={approver}
+                    onChange={(e) => setApprover(e.target.value)}
+                    placeholder="승인자 이름을 입력하세요"
+                    className="form-input"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="reason">긴급 복원 사유 *</label>
+                  <textarea
+                    id="reason"
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    placeholder="긴급 복원이 필요한 구체적인 사유를 입력하세요"
+                    className="form-textarea"
+                    rows={4}
+                  />
+                </div>
               </div>
-              <p>위 토큰을 아래 입력란에 입력하고 승인을 요청하세요.</p>
-              <div className="form-group">
-                <label htmlFor="tokenInput">토큰 입력</label>
-                <input
-                  id="tokenInput"
-                  type="text"
-                  value={inputToken}
-                  onChange={(e) => setInputToken(e.target.value)}
-                  placeholder="6자리 토큰을 입력하세요"
-                />
+
+              <div className="confirmation-text">
+                <strong>정말로 긴급 복원을 진행하시겠습니까?</strong>
               </div>
             </div>
-          )}
+          </div>
         </main>
 
         <footer className="modal-footer">
-          <button className="btn btn-secondary" onClick={onClose}>취소</button>
-          {step === 'request' && (
-            <button className="btn btn-primary" onClick={handleRequestToken}>토큰 발급 요청</button>
-          )}
-          {step === 'submit' && (
-            <button
-              className="btn btn-danger"
-              onClick={handleSubmitApproval}
-              disabled={inputToken !== issuedToken || !inputToken}
-            >
-              긴급 승인 요청
-            </button>
-          )}
+          <button className="btn btn-secondary" onClick={onClose}>
+            취소
+          </button>
+          <button
+            className="btn btn-danger"
+            onClick={handleEmergencyRestore}
+            disabled={!isFormValid}
+          >
+            긴급 복원 승인
+          </button>
         </footer>
       </div>
     </div>

@@ -2,7 +2,7 @@
 import { useState, useMemo } from 'react';
 import './TableStyles.css';
 import './FilterStyles.css';
-import { AWS_REGIONS, getRegionDisplayName } from '../constants/awsRegions';
+import { AWS_REGIONS } from '../constants/awsRegions';
 
 interface Setting {
     id: string;
@@ -19,7 +19,7 @@ const generateInitialSettings = (accountId: string): Setting[] => {
         account: accountId,
         regionCode: region.code,
         regionName: region.name,
-        isManaged: false,
+        isManaged: Math.random() > 0.7, // Random managed status for demo
         backupType: '수동백업' as const,
     }));
 };
@@ -34,7 +34,7 @@ const AllRegionsSettingsTab = () => {
     const [filters, setFilters] = useState({
         account: '',
         region: '',
-        isManaged: ''
+        isManaged: '' // 'true', 'false', ''
     });
 
     const handleToggleManaged = (id: string) => {
