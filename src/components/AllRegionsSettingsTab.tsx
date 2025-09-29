@@ -13,13 +13,16 @@ interface Setting {
     backupType: '자동백업' | '수동백업';
 }
 
+type SortField = 'account' | 'regionName' | 'isManaged' | 'backupType';
+type SortOrder = 'asc' | 'desc';
+
 const generateInitialSettings = (accountId: string): Setting[] => {
     return AWS_REGIONS.map(region => ({
         id: `${accountId}-${region.code}`,
         account: accountId,
         regionCode: region.code,
         regionName: region.name,
-        isManaged: Math.random() > 0.7, // Random managed status for demo
+        isManaged: Math.random() > 0.7,
         backupType: '수동백업' as const,
     }));
 };
@@ -30,11 +33,15 @@ const AllRegionsSettingsTab = () => {
         return accounts.flatMap(account => generateInitialSettings(account));
     });
 
+    // ✅ [추가] 정렬 상태
+    const [sortField, setSortField] = useState<SortField>('account');
+    const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+
     // 필터 상태
     const [filters, setFilters] = useState({
         account: '',
         region: '',
-        isManaged: '' // 'true', 'false', ''
+        isManaged: ''
     });
 
     const handleToggleManaged = (id: string) => {
@@ -43,6 +50,22 @@ const AllRegionsSettingsTab = () => {
 
     const handleBackupTypeChange = (id: string, newBackupType: '자동백업' | '수동백업') => {
         setSettings(settings.map(s => s.id === id ? { ...s, backupType: newBackupType } : s));
+    };
+
+    // ✅ [추가] 정렬 핸들러
+    const handleSort = (field: SortField) => {
+        if (sortField === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortOrder('asc');
+        }
+    };
+
+    // ✅ [추가] 정렬 아이콘
+    const getSortIcon = (field: SortField) => {
+        if (sortField !== field) return ' ↕️';
+        return sortOrder === 'asc' ? ' ⬇️' : '⬆️';
     };
 
     // 필터링된 데이터
@@ -58,7 +81,45 @@ const AllRegionsSettingsTab = () => {
         });
     }, [settings, filters]);
 
-    // 유니크한 계정과 리전 목록
+    // ✅ [추가] 정렬된 데이터
+    const sortedSettings = useMemo(() => {
+        const sorted = [...filteredSettings].sort((a, b) => {
+            let aValue: string | boolean = '';
+            let bValue: string | boolean = '';
+
+            switch (sortField) {
+                case 'account':
+                    aValue = a.account;
+                    bValue = b.account;
+                    break;
+                case 'regionName':
+                    aValue = a.regionName;
+                    bValue = b.regionName;
+                    break;
+                case 'isManaged':
+                    aValue = a.isManaged;
+                    bValue = b.isManaged;
+                    break;
+                case 'backupType':
+                    aValue = a.backupType;
+                    bValue = b.backupType;
+                    break;
+            }
+
+            if (typeof aValue === 'boolean' && typeof bValue === 'boolean') {
+                if (aValue === bValue) return 0;
+                return sortOrder === 'asc'
+                    ? (aValue ? 1 : -1)
+                    : (aValue ? -1 : 1);
+            }
+
+            if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+        return sorted;
+    }, [filteredSettings, sortField, sortOrder]);
+
     const uniqueAccounts = useMemo(() => [...new Set(settings.map(s => s.account))], [settings]);
     const uniqueRegions = useMemo(() => AWS_REGIONS, []);
 
@@ -119,14 +180,22 @@ const AllRegionsSettingsTab = () => {
                 <table className="data-table">
                     <thead>
                         <tr>
-                            <th>계정</th>
-                            <th>리전</th>
-                            <th style={{ width: '120px' }}>관리 여부</th>
-                            <th>백업 방식</th>
+                            <th style={{ cursor: 'pointer' }} onClick={() => handleSort('account')}>
+                                계정{getSortIcon('account')}
+                            </th>
+                            <th style={{ cursor: 'pointer' }} onClick={() => handleSort('regionName')}>
+                                리전{getSortIcon('regionName')}
+                            </th>
+                            <th style={{ width: '120px', cursor: 'pointer' }} onClick={() => handleSort('isManaged')}>
+                                관리 여부{getSortIcon('isManaged')}
+                            </th>
+                            <th style={{ cursor: 'pointer' }} onClick={() => handleSort('backupType')}>
+                                백업 방식{getSortIcon('backupType')}
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredSettings.map((s) => (
+                        {sortedSettings.map((s) => (
                             <tr key={s.id}>
                                 <td>{s.account}</td>
                                 <td>{s.regionName}</td>

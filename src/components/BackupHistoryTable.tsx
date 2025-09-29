@@ -18,14 +18,67 @@ interface BackupHistoryTableProps {
     onRestoreAction: (action: string, backupId: string) => void;
 }
 
+type SortField = 'id' | 'account' | 'region' | 'type' | 'status';
+type SortOrder = 'asc' | 'desc';
+
 const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
     data,
     selectedItems,
     onSelectionChange,
     onRestoreAction
 }) => {
-    // ✅ [추가] 확장된 이슈 상태 관리
     const [expandedIssues, setExpandedIssues] = useState<string | null>(null);
+    const [sortField, setSortField] = useState<SortField>('id');
+    const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+
+    const sortedData = useMemo(() => {
+        const sorted = [...data].sort((a, b) => {
+            let aValue: string | number = '';
+            let bValue: string | number = '';
+
+            switch (sortField) {
+                case 'id':
+                    aValue = a.id;
+                    bValue = b.id;
+                    break;
+                case 'account':
+                    aValue = a.account;
+                    bValue = b.account;
+                    break;
+                case 'region':
+                    aValue = a.region;
+                    bValue = b.region;
+                    break;
+                case 'type':
+                    aValue = a.type;
+                    bValue = b.type;
+                    break;
+                case 'status':
+                    aValue = a.status;
+                    bValue = b.status;
+                    break;
+            }
+
+            if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+            return 0;
+        });
+        return sorted;
+    }, [data, sortField, sortOrder]);
+
+    const handleSort = (field: SortField) => {
+        if (sortField === field) {
+            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+        } else {
+            setSortField(field);
+            setSortOrder('asc');
+        }
+    };
+
+    const getSortIcon = (field: SortField) => {
+        if (sortField !== field) return ' ↕️';
+        return sortOrder === 'asc' ? ' ⬇️' : '⬆️';
+    };
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
@@ -50,17 +103,14 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
         [selectedItems, data]
     );
 
-    // ✅ [수정] 인라인 확장 토글 함수
     const toggleExpandedIssues = (itemId: string, event: React.MouseEvent) => {
         event.stopPropagation();
         setExpandedIssues(expandedIssues === itemId ? null : itemId);
     };
 
-    // ✅ [수정] Jira 이슈 렌더링 - 인라인 확장 방식
     const renderJiraIssues = (item: BackupItem) => {
         const issues = item.jiraIssues || [];
 
-        // 이슈가 없는 경우
         if (issues.length === 0) {
             return (
                 <div className="jira-issue-container">
@@ -72,7 +122,6 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
             );
         }
 
-        // 첫 번째 이슈와 나머지 이슈 분리
         const firstIssue = issues[0];
         const remainingIssues = issues.slice(1);
         const remainingCount = remainingIssues.length;
@@ -81,7 +130,6 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
         return (
             <div className="jira-issue-container">
                 <div className="jira-issue-links">
-                    {/* 메인 이슈 - 첫 번째 이슈 */}
                     <div className="jira-issue-main">
                         <a
                             href={`#jira/${firstIssue}`}
@@ -95,7 +143,6 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
                         </a>
                     </div>
 
-                    {/* +N 토글 버튼 */}
                     <div className="jira-issue-extra">
                         {remainingCount > 0 && (
                             <button
@@ -107,7 +154,6 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
                         )}
                     </div>
 
-                    {/* 확장된 추가 이슈들 */}
                     {remainingCount > 0 && (
                         <div className={`jira-expanded-issues ${isExpanded ? 'show' : ''}`}>
                             {remainingIssues.map((issue, index) => (
@@ -130,12 +176,10 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
         );
     };
 
-    // ✅ [기존] 작업 버튼 렌더링 로직
     const renderActionButtons = (item: BackupItem) => {
         const showOnlyDetailButton = item.status === 'ROLLBACK_INPROGRESS' || (item.status === 'ARCHIVED' && item.issueCount > 0);
         const showAllButtons = item.status === 'ROLLBACK_WAIT_FOR_APPLY';
 
-        // 버튼이 없는 경우
         if (!showOnlyDetailButton && !showAllButtons) {
             return null;
         }
@@ -188,17 +232,27 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
                                 checked={isAllSelected}
                             />
                         </th>
-                        <th style={{ width: '12%' }}>Account</th>
-                        <th style={{ width: '14%' }}>리전</th>
-                        <th style={{ width: '16%' }}>Tag (ID)</th>
-                        <th style={{ width: '10%' }}>백업 방식</th>
-                        <th style={{ width: '8%' }}>상태</th>
+                        <th style={{ width: '12%', cursor: 'pointer' }} onClick={() => handleSort('account')}>
+                            Account{getSortIcon('account')}
+                        </th>
+                        <th style={{ width: '14%', cursor: 'pointer' }} onClick={() => handleSort('region')}>
+                            리전{getSortIcon('region')}
+                        </th>
+                        <th style={{ width: '16%', cursor: 'pointer' }} onClick={() => handleSort('id')}>
+                            Tag (ID){getSortIcon('id')}
+                        </th>
+                        <th style={{ width: '10%', cursor: 'pointer' }} onClick={() => handleSort('type')}>
+                            백업 방식{getSortIcon('type')}
+                        </th>
+                        <th style={{ width: '8%', cursor: 'pointer' }} onClick={() => handleSort('status')}>
+                            상태{getSortIcon('status')}
+                        </th>
                         <th style={{ width: '18%' }}>Jira 이슈</th>
                         <th style={{ width: '18%' }}>작업</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {data.map((item) => {
+                    {sortedData.map((item) => {
                         const isSelected = selectedItems.includes(item.id);
                         const rowClasses = [
                             isSelected ? 'selected' : '',

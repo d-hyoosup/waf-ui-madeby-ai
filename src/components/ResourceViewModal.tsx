@@ -14,16 +14,16 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
   const resourceTypes = ["Web ACLs", "IP Sets", "Regex pattern", "Rule Groups"];
   const [activeTab, setActiveTab] = useState(resourceTypes[0]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
+  const [showChangedOnly, setShowChangedOnly] = useState(false);
 
   const isCompare = type === 'compare' || type === 'restore' || type === 'manual_backup';
   const isCurrentCompare = items.includes('current') || items.includes('live');
 
-  // ✅ [수정] 타이틀 로직 개선
   const modalTitle = useMemo(() => {
     if (type === 'restore') {
       return 'WAF Rule 복원';
     } else if (type === 'manual_backup') {
-      return 'WAF Rule 비교'; // manual_backup도 비교 모달과 동일한 타이틀
+      return 'WAF Rule 비교';
     } else if (type === 'compare') {
       return 'WAF Rule 비교';
     } else if (type === 'view') {
@@ -32,7 +32,6 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
     return '리소스 보기';
   }, [type, items]);
 
-  // ✅ [수정] 버튼 로직 개선
   const getFooterButtons = () => {
     if (type === 'restore') {
       return (
@@ -64,6 +63,12 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
     return Object.keys(mockBackupResourceData[itemId]?.[activeTab] || {});
   };
 
+  const getData = (itemId: string, fileName: string | null) => {
+    if (!fileName) return '';
+    if (itemId === 'current' || itemId === 'live') return mockCurrentResourceData[activeTab]?.[fileName] || '';
+    return mockBackupResourceData[itemId]?.[activeTab]?.[fileName] || '';
+  };
+
   const fileListWithStatus = useMemo(() => {
     if (!isCompare) {
       const files = getFilesForTab(items[0]);
@@ -77,20 +82,37 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
     const filesB = getFilesForTab(itemB);
     const allFiles = Array.from(new Set([...filesA, ...filesB])).sort();
 
-    return allFiles.map(file => {
+    const filesWithStatus = allFiles.map(file => {
       const inA = filesA.includes(file);
       const inB = filesB.includes(file);
-      let status: 'both' | 'itemA_only' | 'itemB_only' = 'both';
-      if (inA && !inB) status = 'itemA_only';
-      else if (!inA && inB) status = 'itemB_only';
-      return { name: file, status };
-    });
-  }, [activeTab, items, isCompare, isCurrentCompare]);
 
-  const getData = (itemId: string, fileName: string | null) => {
-    if (!fileName) return '';
-    if (itemId === 'current' || itemId === 'live') return mockCurrentResourceData[activeTab]?.[fileName] || '';
-    return mockBackupResourceData[itemId]?.[activeTab]?.[fileName] || '';
+      if (!inA && inB) return { name: file, status: 'itemB_only' as const };
+      if (inA && !inB) return { name: file, status: 'itemA_only' as const };
+
+      // 양쪽에 모두 존재하는 경우 내용 비교
+      const dataA = getData(itemA, file);
+      const dataB = getData(itemB, file);
+      const isIdentical = dataA === dataB;
+
+      return {
+        name: file,
+        status: isIdentical ? 'identical' as const : 'modified' as const
+      };
+    });
+
+    if (showChangedOnly) {
+      return filesWithStatus.filter(f => f.status !== 'identical');
+    }
+
+    return filesWithStatus;
+  }, [activeTab, items, isCompare, isCurrentCompare, showChangedOnly]);
+
+  const getStatusText = (status: string) => {
+    if (status === 'itemA_only') return '삭제됨';
+    if (status === 'itemB_only') return '추가됨';
+    if (status === 'modified') return '수정됨';
+    if (status === 'identical') return '동일';
+    return '';
   };
 
   const highlightDiffs = (text: string, itemIndex: number) => {
@@ -125,7 +147,8 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
   };
 
   const renderContentView = (itemId: string, itemIndex: number = 0) => {
-    const title = itemId === 'current' || itemId === 'live' ? '현재 적용중' : itemId;
+    const title = itemId === 'current' || itemId === 'live' ? '현재 적용중' :
+                  itemId === items[0] && items[0] !== 'live' && items[0] !== 'current' ? `최종 백업 (${itemId})` : itemId;
 
     if (!activeFile) {
       return (
@@ -140,12 +163,22 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
     }
 
     const fileData = getData(itemId, activeFile);
+    const currentFileStatus = fileListWithStatus.find(f => f.name === activeFile);
 
     if (!fileData) {
         return (
             <div className="json-viewer-container">
                 <h4>{title}</h4>
-                <div className="file-info">파일: {activeFile}</div>
+                {activeFile && (
+                  <div className="file-info">
+                    <span>파일: {activeFile}</span>
+                    {isCompare && currentFileStatus && (
+                      <span className="file-status-badge">
+                        {getStatusText(currentFileStatus.status)}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <div className="empty-state">
                     <div className="empty-state-content">
                         <p>이 버전에는 파일이 존재하지 않습니다.</p>
@@ -158,7 +191,16 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
     return (
         <div className="json-viewer-container">
             <h4>{title}</h4>
-            <div className="file-info">파일: {activeFile}</div>
+            {activeFile && (
+              <div className="file-info">
+                <span>파일: {activeFile}</span>
+                {isCompare && currentFileStatus && (
+                  <span className="file-status-badge">
+                    {getStatusText(currentFileStatus.status)}
+                  </span>
+                )}
+              </div>
+            )}
             {isCompare ? highlightDiffs(fileData, itemIndex) : <pre className="json-viewer">{fileData}</pre>}
         </div>
     );
@@ -187,17 +229,34 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
           <div className="resource-content-wrapper">
             <aside className="file-list-panel">
               <h5>파일 목록</h5>
+              {isCompare && (
+                <div className="filter-checkbox">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={showChangedOnly}
+                      onChange={(e) => setShowChangedOnly(e.target.checked)}
+                    />
+                    <span>변경사항만 보기</span>
+                  </label>
+                </div>
+              )}
               <ul className="file-list">
                 {fileListWithStatus.map(({ name, status }) => (
-                  <li key={name} className={activeFile === name ? 'active' : ''} onClick={() => setActiveFile(name)}>
+                  <li
+                    key={name}
+                    className={activeFile === name ? 'active' : ''}
+                    data-status={status}
+                    onClick={() => setActiveFile(name)}
+                  >
                     {isCompare && <span className={`file-status-indicator status-${status}`}></span>}
                     <span className="file-name">{name}</span>
-                    {isCompare && status === 'itemA_only' && <span className="file-status-tag">A</span>}
-                    {isCompare && status === 'itemB_only' && <span className="file-status-tag">B</span>}
+                    {isCompare && (
+                      <span className="file-status-tag">{getStatusText(status)}</span>
+                    )}
                   </li>
                 ))}
               </ul>
-              {/* ✅ [삭제] 파일 상태 범례 제거 */}
             </aside>
 
             <section className="resource-content">

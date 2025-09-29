@@ -5,6 +5,7 @@ import BackupHistoryTable from '../components/BackupHistoryTable';
 import ResourceViewModal from '../components/ResourceViewModal';
 import RestoreStatusModal from '../components/RestoreStatusModal';
 import EmergencyApprovalModal from '../components/EmergencyApprovalModal';
+import RestoreCancelModal from '../components/RestoreCancelModal';
 import type { RestoreData, JiraIssue, BackupItem } from '../types/restore.types';
 import { mockBackupData } from '../data/mockBackupData';
 import { AWS_REGIONS } from '../constants/awsRegions';
@@ -19,6 +20,10 @@ const BackupRestore = () => {
     const [restoreModalOpen, setRestoreModalOpen] = useState(false);
     const [restoreProcessData, setRestoreProcessData] = useState<RestoreData | null>(null);
     const [emergencyApprovalModal, setEmergencyApprovalModal] = useState<{
+        open: boolean;
+        backupId: string;
+    }>({ open: false, backupId: '' });
+    const [restoreCancelModal, setRestoreCancelModal] = useState<{
         open: boolean;
         backupId: string;
     }>({ open: false, backupId: '' });
@@ -50,7 +55,6 @@ const BackupRestore = () => {
 
     const numSelected = selectedItems.length;
 
-    // ✅ [추가] 복원 버튼 핸들러
     const handleRestoreClick = () => {
         if (numSelected === 1) {
             const selectedItem = filteredData.find(item => selectedItems.includes(item.id));
@@ -69,16 +73,13 @@ const BackupRestore = () => {
         }
     };
 
-    // ✅ [수정] 비교 로직 개선
     const handleCompare = () => {
         if (numSelected === 1) {
-            // 단일 선택: Live WAF와 선택된 백업 비교
             setResourceViewModal({
                 type: 'compare',
                 items: ['live', selectedItems[0]]
             });
         } else if (numSelected === 2) {
-            // 2개 선택: 백업 간 비교
             setResourceViewModal({
                 type: 'compare',
                 items: selectedItems
@@ -86,10 +87,8 @@ const BackupRestore = () => {
         }
     };
 
-    // ✅ [수정] 수동백업 시 선택된 항목과 Live WAF 비교
     const handleManualBackupClick = () => {
         if (numSelected === 1 && canManualBackup) {
-            // 수동 백업 시 선택된 항목과 Live WAF 비교
             setResourceViewModal({
                 type: 'manual_backup',
                 items: ['live', selectedItems[0]]
@@ -97,18 +96,14 @@ const BackupRestore = () => {
         }
     };
 
-    // ✅ [수정] 수동백업 버튼 활성화 조건 - 단일 선택 + requiresManualBackup: true
     const canManualBackup = numSelected === 1 && filteredData.find(item =>
         selectedItems.includes(item.id) && item.requiresManualBackup
     );
 
-    // ✅ [추가] 복원 버튼 활성화 조건 체크
     const canRestore = numSelected === 1 && filteredData.find(item =>
         selectedItems.includes(item.id) && item.status === 'ARCHIVED'
     );
 
-    // ✅ [추가] 비교 버튼 텍스트 동적 변경
-    // ✅ [수정] 긴급 승인 확인 처리 - 승인자와 사유 추가
     const handleEmergencyApprovalConfirm = (approver: string, reason: string) => {
         const backup = mockBackupData.find(item => item.id === emergencyApprovalModal.backupId);
         if (!backup) return;
@@ -136,6 +131,34 @@ const BackupRestore = () => {
         setRestoreModalOpen(true);
     };
 
+    const handleRestoreCancelConfirm = (requester: string, reason: string) => {
+        const backup = mockBackupData.find(item => item.id === restoreCancelModal.backupId);
+        if (!backup) return;
+
+        const mockIssues: JiraIssue[] = Array.from({ length: backup.issueCount || 1 }, (_, i) => ({
+            issueKey: `GCI-${51 + i}`,
+            link: `https://jira.example.com/browse/GCI-${51 + i}`,
+            interruptFlag: "NONE"
+        }));
+
+        const restoreData: RestoreData = {
+            snapshotId: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+            accountId: backup.account,
+            accountName: "HAE_Manager",
+            regionCode: backup.region,
+            regionName: AWS_REGIONS.find(r => r.code === backup.region)?.name || backup.region,
+            scope: backup.region === 'aws-global' ? 'CLOUDFRONT' : 'REGIONAL',
+            tagName: restoreCancelModal.backupId,
+            status: 'PROCESSING',
+            issues: mockIssues,
+            showCancelProcess: true
+        };
+
+        alert(`복원 취소가 요청되었습니다.\n요청자: ${requester}\n사유: ${reason}`);
+        setRestoreProcessData(restoreData);
+        setRestoreModalOpen(true);
+    };
+
     const handleRestoreAction = (action: string, backupId: string) => {
         const backup = mockBackupData.find(item => item.id === backupId);
         if (!backup) return;
@@ -158,15 +181,16 @@ const BackupRestore = () => {
             issues: mockIssues,
         };
 
-        // ✅ [수정] 긴급 승인 로직 - 모달 사용
         if (action === 'JIRA_APPROVAL_WAITING') {
             setEmergencyApprovalModal({
                 open: true,
                 backupId: backupId
             });
         } else if (action === 'ROLLBACK_CANCEL') {
-            setRestoreProcessData({ ...baseRestoreData, showCancelProcess: true });
-            setRestoreModalOpen(true);
+            setRestoreCancelModal({
+                open: true,
+                backupId: backupId
+            });
         } else if (action === 'VIEW_DETAIL') {
             setRestoreProcessData(baseRestoreData);
             setRestoreModalOpen(true);
@@ -257,6 +281,14 @@ const BackupRestore = () => {
                     backupId={emergencyApprovalModal.backupId}
                     onClose={() => setEmergencyApprovalModal({ open: false, backupId: '' })}
                     onConfirm={handleEmergencyApprovalConfirm}
+                />
+            )}
+
+            {restoreCancelModal.open && (
+                <RestoreCancelModal
+                    backupId={restoreCancelModal.backupId}
+                    onClose={() => setRestoreCancelModal({ open: false, backupId: '' })}
+                    onConfirm={handleRestoreCancelConfirm}
                 />
             )}
 
