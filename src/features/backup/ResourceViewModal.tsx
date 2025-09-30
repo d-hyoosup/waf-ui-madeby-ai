@@ -26,59 +26,69 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
   const isCompare = type === 'compare' || type === 'restore' || type === 'manual_backup';
   const isCurrentCompare = items.some(item => item.id === 'current' || item.id === 'live');
 
-  const itemIds = useMemo(() => items.map(item => item.id), [items]);
-
   const modalTitle = useMemo(() => {
     if (type === 'restore') return 'WAF Rule 복원';
     if (type === 'manual_backup') return 'WAF Rule 비교';
     if (type === 'compare') return 'WAF Rule 비교';
     if (type === 'view') {
-        const item = items[0];
-        const prefix = item.status === 'APPLIED' ? '최종 백업 조회: ' : '백업 조회: ';
-        return `${prefix}${item.id}`;
+        return 'WAF Rule 백업 조회'
+        // const item = items[0];
+        // const prefix = item.status === 'APPLIED' ? '최종 백업 조회: ' : '백업 조회: ';
+        // return `${prefix}${item.id}`;
     }
     return '리소스 보기';
   }, [type, items]);
+
+  // ✅ [수정] itemA와 itemB를 명확하게 분리하여 순서를 고정합니다.
+  const { itemA, itemB } = useMemo(() => {
+    if (!isCompare) return { itemA: items[0]?.id, itemB: null };
+
+    if (isCurrentCompare) {
+        // live와 비교 시: itemA는 백업, itemB는 live로 고정
+        return {
+            itemA: items.find(item => item.id !== 'live' && item.id !== 'current')?.id,
+            itemB: items.find(item => item.id === 'live' || item.id === 'current')?.id,
+        }
+    }
+    // 백업 간 비교 시: 첫 번째 선택을 itemA, 두 번째를 itemB로 설정
+    return { itemA: items[0]?.id, itemB: items[1]?.id };
+  }, [items, isCompare, isCurrentCompare]);
 
   React.useEffect(() => {
     setActiveFile(null);
   }, [activeTab]);
 
-  const getFilesForTab = (itemId: string) => {
-    if (itemId === 'current' || itemId === 'live') {
-      return Object.keys(mockCurrentResourceData[activeTab] || {});
-    }
-    return Object.keys(mockBackupResourceData[itemId]?.[activeTab] || {});
-  };
-
-  const getData = (itemId: string, fileName: string | null) => {
-    if (!fileName) return '';
+  const getData = (itemId: string | null, fileName: string | null) => {
+    if (!itemId || !fileName) return '';
     if (itemId === 'current' || itemId === 'live') return mockCurrentResourceData[activeTab]?.[fileName] || '';
     return mockBackupResourceData[itemId]?.[activeTab]?.[fileName] || '';
   };
 
   const fileListWithStatus = useMemo(() => {
-    if (!isCompare) {
-      const files = getFilesForTab(items[0].id);
+    if (!isCompare || !itemA || !itemB) {
+      if (!items || items.length === 0 || !items[0].id) return [];
+      const files = Object.keys(mockBackupResourceData[items[0].id]?.[activeTab] || {});
       return files.map(name => ({ name, status: 'single' as const }));
     }
 
-    const itemA_id = isCurrentCompare ? (items.find(item => item.id === 'live' || item.id === 'current')!.id) : items[0].id;
-    const itemB_id = isCurrentCompare ? (items.find(item => item.id !== 'live' && item.id !== 'current')!.id) : items[1].id;
+    const filesA = Object.keys(mockBackupResourceData[itemA]?.[activeTab] || {});
+    const filesB = Object.keys((itemB === 'live' || itemB === 'current')
+        ? (mockCurrentResourceData[activeTab] || {})
+        : (mockBackupResourceData[itemB]?.[activeTab] || {}));
 
-    const filesA = getFilesForTab(itemA_id);
-    const filesB = getFilesForTab(itemB_id);
     const allFiles = Array.from(new Set([...filesA, ...filesB])).sort();
 
-    const filesWithStatus = allFiles.map(file => {
+    return allFiles.map(file => {
       const inA = filesA.includes(file);
       const inB = filesB.includes(file);
 
-      if (!inA && inB) return { name: file, status: 'itemB_only' as const };
-      if (inA && !inB) return { name: file, status: 'itemA_only' as const };
+      // ✅ [수정] live 기준 비교 로직 반영
+      // itemA: 백업(old), itemB: live(new)
+      if (inA && !inB) return { name: file, status: 'itemA_only' as const }; // 백업에만 존재 -> live에서 '삭제됨'
+      if (!inA && inB) return { name: file, status: 'itemB_only' as const }; // live에만 존재 -> live에 '추가됨'
 
-      const dataA = getData(itemA_id, file);
-      const dataB = getData(itemB_id, file);
+      const dataA = getData(itemA, file);
+      const dataB = getData(itemB, file);
       const isIdentical = dataA === dataB;
 
       return {
@@ -87,35 +97,35 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
       };
     });
 
-    if (showChangedOnly) {
-      return filesWithStatus.filter(f => f.status !== 'identical');
-    }
-
-    return filesWithStatus;
-  }, [activeTab, items, isCompare, isCurrentCompare, showChangedOnly]);
+  }, [activeTab, itemA, itemB, isCompare, showChangedOnly, items]);
 
   const getStatusText = (status: string) => {
-    if (status === 'itemA_only') return '삭제됨';
-    if (status === 'itemB_only') return '추가됨';
+      if (status === 'itemA_only') return '삭제됨'; // live에 없으므로 '삭제됨'
+      if (status === 'itemB_only') return '추가됨'; // live에 있으므로 '추가됨'
     if (status === 'modified') return '수정됨';
     if (status === 'identical') return '동일';
     return '';
   };
 
-  const highlightDiffs = (text: string, currentItemId: string) => {
-    if (!isCompare || !activeFile) {
+  const highlightDiffs = (text: string, currentItemId: string | null) => {
+    if (!isCompare || !activeFile || !itemA || !itemB) {
         return <pre className="json-viewer">{text}</pre>;
     }
 
     const lines = text.split('\n');
-    const otherItem = items.find(item => item.id !== currentItemId);
-    if (!otherItem) {
-        return <pre className="json-viewer">{text}</pre>;
-    }
-    const otherText = getData(otherItem.id, activeFile);
+    const otherItemId = currentItemId === itemA ? itemB : itemA;
+    const otherText = getData(otherItemId, activeFile);
 
     if (!otherText) {
-        return <pre className="json-viewer">{text}</pre>;
+        // 비교 대상 파일이 없으면 전체를 추가/삭제로 처리
+        const className = currentItemId === itemA ? 'diff-removed' : 'diff-added';
+        return (
+            <div className="code-viewer-with-diff">
+                {lines.map((line, index) => (
+                    <div key={index} className={`code-line ${className}`}>{line || ' '}</div>
+                ))}
+            </div>
+        );
     }
 
     return (
@@ -123,19 +133,29 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
         {lines.map((line, index) => {
           const trimmedLine = line.trim();
           const isDifferent = trimmedLine.length > 0 && !otherText.includes(trimmedLine);
-          const isFirstItem = items[0].id === currentItemId;
-          const className = isDifferent ? (isFirstItem ? 'diff-removed' : 'diff-added') : '';
+          // itemA(백업)에만 있는 라인은 removed, itemB(live)에만 있는 라인은 added
+          const className = isDifferent ? (currentItemId === itemA ? 'diff-removed' : 'diff-added') : '';
           return <div key={index} className={`code-line ${className}`}>{line || ' '}</div>;
         })}
       </div>
     );
   };
 
-  const renderContentPane = (itemId: string) => {
+  const getItemTitle = (itemId: string | null) => {
+    if (!itemId) return '';
+    const currentItem = items.find(it => it.id === itemId);
+    const isApplied = currentItem?.status === 'APPLIED';
+
+    if (itemId === 'current' || itemId === 'live') return '현재 적용중 (Live)';
+
+    return isApplied ? `최종 백업 (${itemId})` : `백업 (${itemId})`;
+  }
+
+  const renderContentPane = (itemId: string | null) => {
+    if (!itemId) return null;
     const fileData = getData(itemId, activeFile);
     const itemTitle = getItemTitle(itemId);
 
-    // activeFile이 없을 때 초기 뷰
     if (!activeFile && isCompare) {
         return (
             <div className="content-pane">
@@ -209,16 +229,6 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
     }
   };
 
-  const itemA = isCurrentCompare ? (itemIds.includes('live') ? 'live' : 'current') : items[0].id;
-  const itemB = isCurrentCompare ? itemIds.find(id => id !== 'current' && id !== 'live')! : items[1].id;
-
-  const getItemTitle = (itemId: string) => {
-      const currentItem = items.find(it => it.id === itemId);
-      const isApplied = currentItem?.status === 'APPLIED';
-      return itemId === 'current' || itemId === 'live' ? '현재 적용중' :
-             isApplied ? `최종 백업 (${itemId})` : itemId;
-  }
-
   return (
     <div className="modal-overlay">
       <div className="modal-content modal-lg">
@@ -289,7 +299,7 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
                             </div>
                         </div>
                      </div>
-                  ) : renderContentPane(items[0].id)
+                  ) : (items && items.length > 0 && renderContentPane(items[0].id))
                 )}
               </section>
             </div>

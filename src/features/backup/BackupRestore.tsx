@@ -79,30 +79,30 @@ const BackupRestore = () => {
         if (numSelected === 1) {
             const selectedItem = filteredData.find(item => selectedItems.includes(item.id));
             if (selectedItem) {
-                // ✅ [수정] id와 status를 함께 전달
                 setResourceViewModal({ type: 'view', items: [{ id: selectedItem.id, status: selectedItem.status }] });
             }
         }
     };
 
     const handleCompare = () => {
-        const selectedBackupItems = filteredData.filter(item => selectedItems.includes(item.id))
-            .map(item => ({ id: item.id, status: item.status }));
+        // ✅ [수정] 사용자가 선택한 순서(selectedItems)를 기준으로 비교 항목을 구성합니다.
+        const itemsInSelectionOrder = selectedItems.map(id => {
+            const item = filteredData.find(d => d.id === id);
+            return { id: item!.id, status: item!.status };
+        });
 
         if (numSelected === 1) {
-            // ✅ [수정] id와 status를 함께 전달
             setResourceViewModal({
                 type: 'compare',
                 items: [
-                    { id: 'live', status: 'APPLIED' },
-                    ...selectedBackupItems
+                    ...itemsInSelectionOrder, // 사용자가 선택한 백업이 첫 번째 (A)
+                    { id: 'live', status: 'APPLIED' }, // live가 두 번째 (B)
                 ]
             });
         } else if (numSelected === 2) {
-            // ✅ [수정] id와 status를 함께 전달
             setResourceViewModal({
                 type: 'compare',
-                items: selectedBackupItems
+                items: itemsInSelectionOrder // 첫 번째 선택이 A, 두 번째 선택이 B
             });
         }
     };
@@ -111,7 +111,6 @@ const BackupRestore = () => {
         if (numSelected === 1 && canManualBackup) {
             const selectedItem = filteredData.find(item => selectedItems.includes(item.id));
             if (selectedItem) {
-                // ✅ [수정] id와 status를 함께 전달
                 setResourceViewModal({
                     type: 'manual_backup',
                     items: [
@@ -190,13 +189,12 @@ const BackupRestore = () => {
         const backup = mockBackupData.find(item => item.id === backupId);
         if (!backup) return;
 
-        // ✅ [수정] Jira 이슈 키에 따라 상태(interruptFlag)를 다르게 설정합니다.
         const jiraIssues: JiraIssue[] = (backup.jiraIssues || []).map(issueKey => {
             let flag: InterruptFlag = "NONE";
             if (issueKey === 'GCI-101') {
-                flag = 'CANCEL'; // GCI-101은 '복원 취소' 상태로 설정
+                flag = 'CANCEL';
             } else if (issueKey === 'GCI-102') {
-                flag = 'FORCE_APPROVED'; // GCI-102는 '긴급 승인' 상태로 설정
+                flag = 'FORCE_APPROVED';
             }
             return {
                 issueKey: issueKey,

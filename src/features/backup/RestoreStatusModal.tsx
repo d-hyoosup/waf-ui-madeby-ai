@@ -55,13 +55,13 @@ const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({onClose, data}) 
     const currentStep = useMemo(() => {
         if (data.issues != undefined) {
             if (data.status === 'ROLLBACK_WAIT_FOR_APPLY') {
-                return 2;
-            } else if (data.status === 'ROLLBACK_INPROGRESS') {
                 return 3;
-            } else if (data.status === 'APPLIED') {
+            } else if (data.status === 'ROLLBACK_INPROGRESS') {
                 return 4;
+            } else if (data.status === 'APPLIED' || data.status === 'ARCHIVED') {
+                return 5;
             } else {
-                return 1;
+                return 2;
             }
         }
 

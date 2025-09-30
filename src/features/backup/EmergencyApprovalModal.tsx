@@ -13,19 +13,19 @@ const EmergencyApprovalModal: React.FC<EmergencyApprovalModalProps> = ({
   onConfirm,
   backupId
 }) => {
-  const [approver, setApprover] = useState('');
-  const [reason, setReason] = useState('');
+  const [approver, setApprover] = useState('사용자');
+  const [reason, setReason] = useState('긴급 승인');
 
   const handleEmergencyRestore = () => {
-    if (!approver.trim() || !reason.trim()) {
-      alert('승인자와 사유를 모두 입력해주세요.');
-      return;
-    }
+    // if (!approver.trim() || !reason.trim()) {
+    //   alert('승인자와 사유를 모두 입력해주세요.');
+    //   return;
+    // }
     onConfirm(approver, reason);
     onClose();
   };
 
-  const isFormValid = approver.trim().length > 0 && reason.trim().length > 0;
+  // const isFormValid = approver.trim().length > 0 && reason.trim().length > 0;
 
   return (
     <div className="modal-overlay">
@@ -41,7 +41,7 @@ const EmergencyApprovalModal: React.FC<EmergencyApprovalModalProps> = ({
             <div className="warning-content">
               {/*<h4>긴급 복원 실행 경고</h4>*/}
               <p>
-                <strong>Tag name: {backupId}</strong>를 긴급 복원하려고 합니다.
+                  Gitlab tag: <strong>{backupId}</strong>를 긴급 복원하려고 합니다.
               </p>
               <div className="warning-list">
                 <p><strong>다음 사항을 반드시 확인하세요:</strong></p>
@@ -54,6 +54,7 @@ const EmergencyApprovalModal: React.FC<EmergencyApprovalModalProps> = ({
                 </ul>
               </div>
 
+              {/*
               <div className="approval-form">
                 <div className="form-group">
                   <label htmlFor="approver">승인자 *</label>
@@ -79,6 +80,7 @@ const EmergencyApprovalModal: React.FC<EmergencyApprovalModalProps> = ({
                   />
                 </div>
               </div>
+              */}
 
               <div className="confirmation-text">
                 <strong>정말로 긴급 복원을 진행하시겠습니까?</strong>
@@ -94,7 +96,7 @@ const EmergencyApprovalModal: React.FC<EmergencyApprovalModalProps> = ({
           <button
             className="btn btn-danger"
             onClick={handleEmergencyRestore}
-            disabled={!isFormValid}
+            // disabled={!isFormValid}
           >
             긴급 복원 승인
           </button>
