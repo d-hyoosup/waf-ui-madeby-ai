@@ -2,8 +2,8 @@
 import React, { useState, useMemo } from 'react';
 import '../../components/styles/ModalStyles.css';
 import './ResourceViewModal.css';
-import { mockBackupResourceData, mockCurrentResourceData } from '../../data/mockResourceData.ts';
-import type {BackupStatus} from '../../types/restore.types.ts';
+import { mockBackupResourceData, mockCurrentResourceData } from '../../data/mockResourceData';
+import type {BackupStatus} from '../../types/restore.types';
 
 // Props 타입 정의
 interface ResourceViewItem {
@@ -26,7 +26,6 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
   const isCompare = type === 'compare' || type === 'restore' || type === 'manual_backup';
   const isCurrentCompare = items.some(item => item.id === 'current' || item.id === 'live');
 
-  // ✅ [수정] string[] 대신 item.id를 매핑하여 ID 목록을 생성합니다.
   const itemIds = useMemo(() => items.map(item => item.id), [items]);
 
   const modalTitle = useMemo(() => {
@@ -60,7 +59,6 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
 
   const fileListWithStatus = useMemo(() => {
     if (!isCompare) {
-      // ✅ [수정] items[0] 객체에서 id를 추출하여 전달합니다.
       const files = getFilesForTab(items[0].id);
       return files.map(name => ({ name, status: 'single' as const }));
     }
@@ -104,14 +102,12 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
     return '';
   };
 
-  // ✅ [수정] itemIndex 대신 currentItemId를 받아 처리하도록 변경
   const highlightDiffs = (text: string, currentItemId: string) => {
     if (!isCompare || !activeFile) {
         return <pre className="json-viewer">{text}</pre>;
     }
 
     const lines = text.split('\n');
-    // ✅ [수정] 다른 아이템의 id를 찾습니다.
     const otherItem = items.find(item => item.id !== currentItemId);
     if (!otherItem) {
         return <pre className="json-viewer">{text}</pre>;
@@ -127,7 +123,6 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
         {lines.map((line, index) => {
           const trimmedLine = line.trim();
           const isDifferent = trimmedLine.length > 0 && !otherText.includes(trimmedLine);
-          // ✅ [수정] itemIndex 대신, 현재 아이템이 비교 쌍의 첫 번째 아이템인지 여부로 클래스를 결정합니다.
           const isFirstItem = items[0].id === currentItemId;
           const className = isDifferent ? (isFirstItem ? 'diff-removed' : 'diff-added') : '';
           return <div key={index} className={`code-line ${className}`}>{line || ' '}</div>;
@@ -136,67 +131,61 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
     );
   };
 
-  const renderContentView = (itemId: string) => {
-    const currentItem = items.find(it => it.id === itemId);
-    const isApplied = currentItem?.status === 'APPLIED';
-
-    const title = itemId === 'current' || itemId === 'live' ? '현재 적용중' :
-                  isApplied ? `최종 백업 (${itemId})` : itemId;
-
-    if (!activeFile) {
-      return (
-        <div className="empty-state">
-          <div className="empty-state-content">
-            <span className="empty-icon">📄</span>
-            <h4>파일을 선택하여 내용을 확인하세요</h4>
-            <p>왼쪽 목록에서 파일을 선택해주세요.</p>
-          </div>
-        </div>
-      );
-    }
-
+  const renderContentPane = (itemId: string) => {
     const fileData = getData(itemId, activeFile);
-    const currentFileStatus = fileListWithStatus.find(f => f.name === activeFile);
+    const itemTitle = getItemTitle(itemId);
 
-    if (!fileData) {
+    // activeFile이 없을 때 초기 뷰
+    if (!activeFile && isCompare) {
         return (
-            <div className="json-viewer-container">
-                <h4>{title}</h4>
-                {activeFile && (
-                  <div className="file-info">
-                    <span>파일: {activeFile}</span>
-                    {isCompare && currentFileStatus && (
-                      <span className="file-status-badge">
-                        {getStatusText(currentFileStatus.status)}
-                      </span>
-                    )}
-                  </div>
-                )}
-                <div className="empty-state">
-                    <div className="empty-state-content">
-                        <p>이 버전에는 파일이 존재하지 않습니다.</p>
+            <div className="content-pane">
+                 <h4 className="content-pane-title">{itemTitle}</h4>
+                 <div className="json-viewer-container empty">
+                    <div className="empty-state">
+                        <div className="empty-state-content">
+                             <span className="empty-icon">📄</span>
+                            <h4>파일을 선택하여 내용을 확인하세요</h4>
+                        </div>
                     </div>
-                </div>
+                 </div>
             </div>
-        );
+        )
     }
 
     return (
-        <div className="json-viewer-container">
-            <h4>{title}</h4>
-            {activeFile && (
-              <div className="file-info">
-                <span>파일: {activeFile}</span>
-                {isCompare && currentFileStatus && (
-                  <span className="file-status-badge">
-                    {getStatusText(currentFileStatus.status)}
-                  </span>
+        <div className="content-pane">
+            <h4 className="content-pane-title">{itemTitle}</h4>
+            <div className="json-viewer-container">
+                {fileData ? (
+                     isCompare ? highlightDiffs(fileData, itemId) : <pre className="json-viewer">{fileData}</pre>
+                ) : (
+                    <div className="empty-state">
+                        <div className="empty-state-content">
+                            <p>이 버전에는 파일이 존재하지 않습니다.</p>
+                        </div>
+                    </div>
                 )}
-              </div>
-            )}
-            {/* ✅ [수정] highlightDiffs에 itemIndex 대신 itemId를 전달합니다. */}
-            {isCompare ? highlightDiffs(fileData, itemId) : <pre className="json-viewer">{fileData}</pre>}
+            </div>
         </div>
+    );
+  };
+
+  const ResourceContentHeader = () => {
+    if (!activeFile) return <div className="resource-content-header placeholder">파일을 선택하세요</div>;
+
+    const currentFile = fileListWithStatus.find(f => f.name === activeFile);
+    if (!currentFile) return null;
+
+    return (
+      <div className="resource-content-header">
+        <div className="file-info-wrapper">
+            {isCompare && <span className={`file-status-indicator status-${currentFile.status}`}></span>}
+            <span className="file-name">{activeFile}</span>
+            {isCompare && (
+              <span className="file-status-tag">{getStatusText(currentFile.status)}</span>
+            )}
+        </div>
+      </div>
     );
   };
 
@@ -220,8 +209,15 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
     }
   };
 
-  const itemA = isCurrentCompare ? (itemIds.includes('live') ? 'live' : 'current') : itemIds[0];
-  const itemB = isCurrentCompare ? itemIds.find(id => id !== 'current' && id !== 'live')! : itemIds[1];
+  const itemA = isCurrentCompare ? (itemIds.includes('live') ? 'live' : 'current') : items[0].id;
+  const itemB = isCurrentCompare ? itemIds.find(id => id !== 'current' && id !== 'live')! : items[1].id;
+
+  const getItemTitle = (itemId: string) => {
+      const currentItem = items.find(it => it.id === itemId);
+      const isApplied = currentItem?.status === 'APPLIED';
+      return itemId === 'current' || itemId === 'live' ? '현재 적용중' :
+             isApplied ? `최종 백업 (${itemId})` : itemId;
+  }
 
   return (
     <div className="modal-overlay">
@@ -273,16 +269,30 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
               </ul>
             </aside>
 
-            <section className="resource-content">
-              {isCompare ? (
-                <>
-                  {renderContentView(itemA)}
-                  {renderContentView(itemB)}
-                </>
-              ) : (
-                renderContentView(items[0].id)
-              )}
-            </section>
+            <div className="resource-main-content">
+              <ResourceContentHeader />
+              <section className="resource-content">
+                {isCompare ? (
+                  <>
+                    {renderContentPane(itemA)}
+                    {renderContentPane(itemB)}
+                  </>
+                ) : (
+                  // 비교 모드가 아닐 때는 하나의 Pane만 렌더링
+                  !activeFile ? (
+                     <div className="json-viewer-container empty single-view">
+                        <div className="empty-state">
+                            <div className="empty-state-content">
+                                <span className="empty-icon">📄</span>
+                                <h4>파일을 선택하여 내용을 확인하세요</h4>
+                                <p>왼쪽 목록에서 파일을 선택해주세요.</p>
+                            </div>
+                        </div>
+                     </div>
+                  ) : renderContentPane(items[0].id)
+                )}
+              </section>
+            </div>
           </div>
         </main>
 
