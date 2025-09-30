@@ -2,346 +2,30 @@
 import React, { useState, useMemo } from 'react';
 import './ModalStyles.css';
 import './CodeViewer.css';
+import { mockBackupResourceData, mockCurrentResourceData } from '../data/mockResourceData';
 
 interface RuleCompareModalProps {
   selectedBackup?: string;
   onClose: () => void;
 }
 
-// 리소스 타입별 파일 구조로 변경
-const resourceData = {
-  "Web ACLs": {
-    backup: {
-      "cpx-global_vehicle_cci-hmg_net.json": `{
-  "Name": "cpx-global_vehicle_cci-hmg_net",
-  "ID": "107370258-1b4b-4df8-8c31-c3c7725e2d6f",
-  "ARN": "arn:aws:wafv2:global:123456789012:webacl/cpx...",
-  "Capacity": 1.44371701984,
-  "DefaultAction": { "Allow": {} },
-  "Rules": [
-    {
-      "Name": "lcs.auth.countbridge",
-      "Priority": 0,
-      "Statement": {
-        "ByteMatchStatement": {
-          "FieldToMatch": { "UriPath": {} },
-          "PositionalConstraint": "CONTAINS",
-          "SearchString": "countbridge",
-          "TextTransformations": [ { "Type": "NONE" } ]
-        }
-      },
-      "Action": { "Block": {} },
-      "VisibilityConfig": { 
-        "CloudWatchMetricsEnabled": true,
-        "MetricName": "countbridge-rule",
-        "SampledRequestsEnabled": false
-      }
-    }
-  ]
-}`,
-      "security-rules-webacl.json": `{
-  "Name": "security-rules-webacl",
-  "ID": "sec-456789-abcd-efgh-ijkl",
-  "Capacity": 2.5,
-  "DefaultAction": { "Block": {} },
-  "Rules": [
-    {
-      "Name": "rate.limit.rule",
-      "Priority": 1,
-      "Statement": {
-        "RateBasedStatement": {
-          "Limit": 10000,
-          "AggregateKeyType": "IP"
-        }
-      },
-      "Action": { "Block": {} }
-    }
-  ]
-}`,
-      "backup-only-webacl.json": `{
-  "Name": "backup-only-webacl",
-  "ID": "backup-only-123",
-  "Capacity": 1.0,
-  "DefaultAction": { "Allow": {} },
-  "Rules": []
-}`
-    },
-    current: {
-      "cpx-global_vehicle_cci-hmg_net.json": `{
-  "Name": "cpx-global_vehicle_cci-hmg_net",
-  "ID": "107370258-1b4b-4df8-8c31-c3c7725e2d6f",
-  "ARN": "arn:aws:wafv2:global:123456789012:webacl/cpx...",
-  "Capacity": 1.44371701984,
-  "DefaultAction": { "Allow": {} },
-  "Rules": [
-    {
-      "Name": "lcs.auth.countbridge",
-      "Priority": 0,
-      "Statement": {
-        "ByteMatchStatement": {
-          "FieldToMatch": { "UriPath": {} },
-          "PositionalConstraint": "CONTAINS",
-          "SearchString": "countbridgevehicle",
-          "TextTransformations": [ { "Type": "NONE" } ]
-        }
-      },
-      "Action": { "Allow": {} },
-      "VisibilityConfig": { 
-        "CloudWatchMetricsEnabled": true,
-        "MetricName": "countbridge-rule-updated",
-        "SampledRequestsEnabled": true
-      }
-    }
-  ]
-}`,
-      "security-rules-webacl.json": `{
-  "Name": "security-rules-webacl",
-  "ID": "sec-456789-abcd-efgh-ijkl",
-  "Capacity": 3.2,
-  "DefaultAction": { "Block": {} },
-  "Rules": [
-    {
-      "Name": "rate.limit.rule",
-      "Priority": 1,
-      "Statement": {
-        "RateBasedStatement": {
-          "Limit": 5000,
-          "AggregateKeyType": "IP"
-        }
-      },
-      "Action": { "Block": {} }
-    },
-    {
-      "Name": "geo.block.rule",
-      "Priority": 2,
-      "Statement": {
-        "GeoMatchStatement": {
-          "CountryCodes": ["CN", "RU"]
-        }
-      },
-      "Action": { "Block": {} }
-    }
-  ]
-}`,
-      "new-current-file.json": `{
-  "Name": "new-current-webacl",
-  "ID": "new-123456789",
-  "Capacity": 1.0,
-  "DefaultAction": { "Allow": {} },
-  "Rules": []
-}`
-    }
-  },
-  "IP Sets": {
-    backup: {
-      "allowed-ips.json": `{
-  "IPSet": {
-    "Name": "AllowedIPs",
-    "Id": "a1b2c3d4-5678-90ab-cdef-123456789012",
-    "ARN": "arn:aws:wafv2:us-east-1:123456789012:ipset/AllowedIPs/a1b2c3d4",
-    "Scope": "REGIONAL",
-    "IPAddressVersion": "IPV4",
-    "Addresses": [
-      "192.168.1.0/24",
-      "10.0.0.0/8",
-      "203.0.113.0/24"
-    ]
-  }
-}`,
-      "blocked-ips.json": `{
-  "IPSet": {
-    "Name": "BlockedIPs",
-    "Id": "blocked-123-456-789",
-    "Scope": "REGIONAL",
-    "IPAddressVersion": "IPV4",
-    "Addresses": [
-      "198.51.100.0/24",
-      "203.0.113.100/32"
-    ]
-  }
-}`,
-      "backup-only-ips.json": `{
-  "IPSet": {
-    "Name": "BackupOnlyIPs",
-    "Id": "backup-only-123",
-    "Scope": "REGIONAL",
-    "IPAddressVersion": "IPV4",
-    "Addresses": [
-      "172.20.0.0/16"
-    ]
-  }
-}`
-    },
-    current: {
-      "allowed-ips.json": `{
-  "IPSet": {
-    "Name": "AllowedIPs",
-    "Id": "a1b2c3d4-5678-90ab-cdef-123456789012",
-    "ARN": "arn:aws:wafv2:us-east-1:123456789012:ipset/AllowedIPs/a1b2c3d4",
-    "Scope": "REGIONAL",
-    "IPAddressVersion": "IPV4",
-    "Addresses": [
-      "192.168.1.0/24",
-      "10.0.0.0/8",
-      "203.0.113.0/24",
-      "172.16.0.0/16"
-    ]
-  }
-}`,
-      "blocked-ips.json": `{
-  "IPSet": {
-    "Name": "BlockedIPs",
-    "Id": "blocked-123-456-789",
-    "Scope": "REGIONAL",
-    "IPAddressVersion": "IPV4",
-    "Addresses": [
-      "198.51.100.0/24",
-      "203.0.113.100/32",
-      "192.0.2.0/24"
-    ]
-  }
-}`
-    }
-  },
-  "Regex pattern sets": {
-    backup: {
-      "bad-user-agents.json": `{
-  "RegexPatternSet": {
-    "Name": "BadUserAgents",
-    "Id": "regex-12345678-abcd-efgh-ijkl-123456789012",
-    "ARN": "arn:aws:wafv2:us-east-1:123456789012:regexpatternset/BadUserAgents",
-    "Scope": "REGIONAL",
-    "RegularExpressionList": [
-      "(?i)(bot|crawl|spider)",
-      "badagent.*",
-      "test.*user"
-    ]
-  }
-}`
-    },
-    current: {
-      "bad-user-agents.json": `{
-  "RegexPatternSet": {
-    "Name": "BadUserAgents",
-    "Id": "regex-12345678-abcd-efgh-ijkl-123456789012",
-    "ARN": "arn:aws:wafv2:us-east-1:123456789012:regexpatternset/BadUserAgents",
-    "Scope": "REGIONAL",
-    "RegularExpressionList": [
-      "(?i)(bot|crawl|spider)",
-      "badagent.*"
-    ]
-  }
-}`
-    }
-  },
-  "Rule groups": {
-    backup: {
-      "custom-rule-group.json": `{
-  "RuleGroup": {
-    "Name": "CustomRuleGroup",
-    "Id": "rg-12345678-abcd-efgh-ijkl-123456789012",
-    "ARN": "arn:aws:wafv2:us-east-1:123456789012:rulegroup/CustomRuleGroup",
-    "Scope": "REGIONAL",
-    "Capacity": 500,
-    "Rules": [
-      {
-        "Name": "BlockSQLInjection",
-        "Priority": 1,
-        "Statement": {
-          "SqliMatchStatement": {
-            "FieldToMatch": { "Body": {} },
-            "TextTransformations": [
-              { "Type": "URL_DECODE" },
-              { "Type": "HTML_ENTITY_DECODE" }
-            ]
-          }
-        },
-        "Action": { "Block": {} }
-      }
-    ]
-  }
-}`,
-      "admin-rule-group.json": `{
-  "RuleGroup": {
-    "Name": "AdminRuleGroup",
-    "Id": "admin-rg-789",
-    "Scope": "REGIONAL",
-    "Capacity": 200,
-    "Rules": [
-      {
-        "Name": "AdminPathProtection",
-        "Priority": 1,
-        "Statement": {
-          "ByteMatchStatement": {
-            "FieldToMatch": { "UriPath": {} },
-            "PositionalConstraint": "STARTS_WITH",
-            "SearchString": "/admin"
-          }
-        },
-        "Action": { "Block": {} }
-      }
-    ]
-  }
-}`
-    },
-    current: {
-      "custom-rule-group.json": `{
-  "RuleGroup": {
-    "Name": "CustomRuleGroup",
-    "Id": "rg-12345678-abcd-efgh-ijkl-123456789012",
-    "ARN": "arn:aws:wafv2:us-east-1:123456789012:rulegroup/CustomRuleGroup",
-    "Scope": "REGIONAL",
-    "Capacity": 700,
-    "Rules": [
-      {
-        "Name": "BlockSQLInjection",
-        "Priority": 1,
-        "Statement": {
-          "SqliMatchStatement": {
-            "FieldToMatch": { "Body": {} },
-            "TextTransformations": [
-              { "Type": "URL_DECODE" },
-              { "Type": "HTML_ENTITY_DECODE" },
-              { "Type": "LOWERCASE" }
-            ]
-          }
-        },
-        "Action": { "Block": {} }
-      }
-    ]
-  }
-}`,
-      "admin-rule-group.json": `{
-  "RuleGroup": {
-    "Name": "AdminRuleGroup",
-    "Id": "admin-rg-789",
-    "Scope": "REGIONAL",
-    "Capacity": 200,
-    "Rules": [
-      {
-        "Name": "AdminPathProtection",
-        "Priority": 1,
-        "Statement": {
-          "ByteMatchStatement": {
-            "FieldToMatch": { "UriPath": {} },
-            "PositionalConstraint": "STARTS_WITH",
-            "SearchString": "/admin"
-          }
-        },
-        "Action": { "Allow": {} }
-      }
-    ]
-  }
-}`
-    }
-  }
-};
-
 const RuleCompareModal: React.FC<RuleCompareModalProps> = ({ selectedBackup, onClose }) => {
   const [activeResource, setActiveResource] = useState<string>("Web ACLs");
   const [activeFile, setActiveFile] = useState<string | null>(null);
-  const resources = Object.keys(resourceData);
   const backupId = selectedBackup || '20250112-150430';
+
+  // Import된 데이터를 컴포넌트가 사용하는 구조로 재구성
+  const resourceData = useMemo(() => {
+    const backupData = mockBackupResourceData[backupId] || {};
+    return {
+        "Web ACLs": { backup: backupData["Web ACLs"], current: mockCurrentResourceData["Web ACLs"] },
+        "IP Sets": { backup: backupData["IP Sets"], current: mockCurrentResourceData["IP Sets"] },
+        "Regex pattern sets": { backup: backupData["Regex pattern sets"], current: mockCurrentResourceData["Regex pattern sets"] },
+        "Rule groups": { backup: backupData["Rule groups"], current: mockCurrentResourceData["Rule groups"] },
+    };
+  }, [backupId]);
+
+  const resources = Object.keys(resourceData);
 
   React.useEffect(() => {
     setActiveFile(null);
@@ -366,7 +50,7 @@ const RuleCompareModal: React.FC<RuleCompareModalProps> = ({ selectedBackup, onC
       }
       return { name: file, status };
     });
-  }, [activeResource]);
+  }, [activeResource, resourceData]);
 
   const highlightDiffs = (text: string, isBackup: boolean) => {
     if (!text || !activeFile) return [];
@@ -391,7 +75,7 @@ const RuleCompareModal: React.FC<RuleCompareModalProps> = ({ selectedBackup, onC
     const resource = resourceData[activeResource as keyof typeof resourceData];
     if (!resource) return '';
     const source = isBackup ? resource.backup : resource.current;
-    return source[activeFile as keyof typeof source] || '';
+    return source?.[activeFile as keyof typeof source] || '';
   };
 
   const renderContentView = (isBackup: boolean) => {

@@ -6,16 +6,21 @@ import ResourceViewModal from '../components/ResourceViewModal';
 import RestoreStatusModal from '../components/RestoreStatusModal';
 import EmergencyApprovalModal from '../components/EmergencyApprovalModal';
 import RestoreCancelModal from '../components/RestoreCancelModal';
-import type { RestoreData, JiraIssue, BackupItem } from '../types/restore.types';
+import type { RestoreData, JiraIssue, BackupItem, InterruptFlag, BackupStatus } from '../types/restore.types';
 import { mockBackupData } from '../data/mockBackupData';
 import { AWS_REGIONS } from '../constants/awsRegions';
 import '../components/FilterStyles.css';
+
+interface ResourceViewItem {
+  id: string;
+  status: BackupStatus;
+}
 
 const BackupRestore = () => {
     const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [resourceViewModal, setResourceViewModal] = useState<{
         type: 'view' | 'compare' | 'restore' | 'manual_backup' | null;
-        items: string[]
+        items: ResourceViewItem[]
     }>({ type: null, items: [] });
     const [restoreModalOpen, setRestoreModalOpen] = useState(false);
     const [restoreProcessData, setRestoreProcessData] = useState<RestoreData | null>(null);
@@ -60,39 +65,61 @@ const BackupRestore = () => {
             const selectedItem = filteredData.find(item => selectedItems.includes(item.id));
             if (selectedItem && selectedItem.status === 'ARCHIVED') {
                 setResourceViewModal({
-                    type: 'restore',
-                    items: ['live', selectedItems[0]]
-                });
+                                    type: 'restore',
+                                    items: [
+                                        { id: 'live', status: 'ACTIVE' },
+                                        { id: selectedItem.id, status: selectedItem.status }
+                                    ]
+                                });
             }
         }
     };
 
     const handleViewClick = () => {
         if (numSelected === 1) {
-            setResourceViewModal({ type: 'view', items: selectedItems });
+            const selectedItem = filteredData.find(item => selectedItems.includes(item.id));
+            if (selectedItem) {
+                // ✅ [수정] id와 status를 함께 전달
+                setResourceViewModal({ type: 'view', items: [{ id: selectedItem.id, status: selectedItem.status }] });
+            }
         }
     };
 
     const handleCompare = () => {
+        const selectedBackupItems = filteredData.filter(item => selectedItems.includes(item.id))
+            .map(item => ({ id: item.id, status: item.status }));
+
         if (numSelected === 1) {
+            // ✅ [수정] id와 status를 함께 전달
             setResourceViewModal({
                 type: 'compare',
-                items: ['live', selectedItems[0]]
+                items: [
+                    { id: 'live', status: 'ACTIVE' },
+                    ...selectedBackupItems
+                ]
             });
         } else if (numSelected === 2) {
+            // ✅ [수정] id와 status를 함께 전달
             setResourceViewModal({
                 type: 'compare',
-                items: selectedItems
+                items: selectedBackupItems
             });
         }
     };
 
     const handleManualBackupClick = () => {
         if (numSelected === 1 && canManualBackup) {
-            setResourceViewModal({
-                type: 'manual_backup',
-                items: ['live', selectedItems[0]]
-            });
+            const selectedItem = filteredData.find(item => selectedItems.includes(item.id));
+            if (selectedItem) {
+                // ✅ [수정] id와 status를 함께 전달
+                setResourceViewModal({
+                    type: 'manual_backup',
+                    items: [
+                        { id: 'live', status: 'ACTIVE' },
+                        { id: selectedItem.id, status: selectedItem.status }
+                    ]
+                });
+            }
         }
     };
 
@@ -108,10 +135,10 @@ const BackupRestore = () => {
         const backup = mockBackupData.find(item => item.id === emergencyApprovalModal.backupId);
         if (!backup) return;
 
-        const mockIssues: JiraIssue[] = Array.from({ length: backup.issueCount || 1 }, (_, i) => ({
-            issueKey: `GCI-${51 + i}`,
-            link: `https://jira.example.com/browse/GCI-${51 + i}`,
-            interruptFlag: "NONE"
+        const jiraIssues: JiraIssue[] = (backup.jiraIssues || []).map(issueKey => ({
+            issueKey: issueKey,
+            link: `https://jira.example.com/browse/${issueKey}`,
+            interruptFlag: "FORCE_APPROVED"
         }));
 
         const restoreData: RestoreData = {
@@ -122,8 +149,8 @@ const BackupRestore = () => {
             regionName: AWS_REGIONS.find(r => r.code === backup.region)?.name || backup.region,
             scope: backup.region === 'aws-global' ? 'CLOUDFRONT' : 'REGIONAL',
             tagName: emergencyApprovalModal.backupId,
-            status: 'PROCESSING',
-            issues: mockIssues,
+            status: 'ROLLBACK_INPROGRESS',
+            issues: jiraIssues,
         };
 
         alert(`긴급 승인이 완료되었습니다.\n승인자: ${approver}\n사유: ${reason}\n\n복원을 시작합니다.`);
@@ -135,10 +162,10 @@ const BackupRestore = () => {
         const backup = mockBackupData.find(item => item.id === restoreCancelModal.backupId);
         if (!backup) return;
 
-        const mockIssues: JiraIssue[] = Array.from({ length: backup.issueCount || 1 }, (_, i) => ({
-            issueKey: `GCI-${51 + i}`,
-            link: `https://jira.example.com/browse/GCI-${51 + i}`,
-            interruptFlag: "NONE"
+        const jiraIssues: JiraIssue[] = (backup.jiraIssues || []).map(issueKey => ({
+            issueKey: issueKey,
+            link: `https://jira.example.com/browse/${issueKey}`,
+            interruptFlag: "CANCEL"
         }));
 
         const restoreData: RestoreData = {
@@ -149,8 +176,8 @@ const BackupRestore = () => {
             regionName: AWS_REGIONS.find(r => r.code === backup.region)?.name || backup.region,
             scope: backup.region === 'aws-global' ? 'CLOUDFRONT' : 'REGIONAL',
             tagName: restoreCancelModal.backupId,
-            status: 'PROCESSING',
-            issues: mockIssues,
+            status: 'ROLLBACK_INPROGRESS',
+            issues: jiraIssues,
             showCancelProcess: true
         };
 
@@ -163,11 +190,20 @@ const BackupRestore = () => {
         const backup = mockBackupData.find(item => item.id === backupId);
         if (!backup) return;
 
-        const mockIssues: JiraIssue[] = Array.from({ length: backup.issueCount || 1 }, (_, i) => ({
-            issueKey: `GCI-${51 + i}`,
-            link: `https://jira.example.com/browse/GCI-${51 + i}`,
-            interruptFlag: "NONE"
-        }));
+        // ✅ [수정] Jira 이슈 키에 따라 상태(interruptFlag)를 다르게 설정합니다.
+        const jiraIssues: JiraIssue[] = (backup.jiraIssues || []).map(issueKey => {
+            let flag: InterruptFlag = "NONE";
+            if (issueKey === 'GCI-101') {
+                flag = 'CANCEL'; // GCI-101은 '복원 취소' 상태로 설정
+            } else if (issueKey === 'GCI-102') {
+                flag = 'FORCE_APPROVED'; // GCI-102는 '긴급 승인' 상태로 설정
+            }
+            return {
+                issueKey: issueKey,
+                link: `https://jira.example.com/browse/${issueKey}`,
+                interruptFlag: flag
+            };
+        });
 
         const baseRestoreData: RestoreData = {
             snapshotId: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
@@ -177,8 +213,8 @@ const BackupRestore = () => {
             regionName: AWS_REGIONS.find(r => r.code === backup.region)?.name || backup.region,
             scope: backup.region === 'aws-global' ? 'CLOUDFRONT' : 'REGIONAL',
             tagName: backupId,
-            status: "WAITING_FOR_APPROVAL",
-            issues: mockIssues,
+            status: backup.status,
+            issues: jiraIssues,
         };
 
         if (action === 'JIRA_APPROVAL_WAITING') {

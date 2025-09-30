@@ -3,10 +3,17 @@ import React, { useState, useMemo } from 'react';
 import './ModalStyles.css';
 import './ResourceViewModal.css';
 import { mockBackupResourceData, mockCurrentResourceData } from '../data/mockResourceData';
+import type {BackupStatus} from '../types/restore.types';
+
+// Props 타입 정의
+interface ResourceViewItem {
+  id: string;
+  status: BackupStatus;
+}
 
 interface ResourceViewModalProps {
   type: 'view' | 'compare' | 'restore' | 'manual_backup';
-  items: string[];
+  items: ResourceViewItem[];
   onClose: () => void;
 }
 
@@ -17,40 +24,22 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
   const [showChangedOnly, setShowChangedOnly] = useState(false);
 
   const isCompare = type === 'compare' || type === 'restore' || type === 'manual_backup';
-  const isCurrentCompare = items.includes('current') || items.includes('live');
+  const isCurrentCompare = items.some(item => item.id === 'current' || item.id === 'live');
+
+  // ✅ [수정] string[] 대신 item.id를 매핑하여 ID 목록을 생성합니다.
+  const itemIds = useMemo(() => items.map(item => item.id), [items]);
 
   const modalTitle = useMemo(() => {
-    if (type === 'restore') {
-      return 'WAF Rule 복원';
-    } else if (type === 'manual_backup') {
-      return 'WAF Rule 비교';
-    } else if (type === 'compare') {
-      return 'WAF Rule 비교';
-    } else if (type === 'view') {
-      return `백업 조회: ${items[0]}`;
+    if (type === 'restore') return 'WAF Rule 복원';
+    if (type === 'manual_backup') return 'WAF Rule 비교';
+    if (type === 'compare') return 'WAF Rule 비교';
+    if (type === 'view') {
+        const item = items[0];
+        const prefix = item.status === 'ACTIVE' ? '최종 백업 조회: ' : '백업 조회: ';
+        return `${prefix}${item.id}`;
     }
     return '리소스 보기';
   }, [type, items]);
-
-  const getFooterButtons = () => {
-    if (type === 'restore') {
-      return (
-        <>
-          <button className="btn btn-primary">복원</button>
-          <button className="btn btn-secondary" onClick={onClose}>닫기</button>
-        </>
-      );
-    } else if (type === 'manual_backup') {
-      return (
-        <>
-          <button className="btn btn-primary">백업</button>
-          <button className="btn btn-secondary" onClick={onClose}>닫기</button>
-        </>
-      );
-    } else {
-      return <button className="btn btn-secondary" onClick={onClose}>닫기</button>;
-    }
-  };
 
   React.useEffect(() => {
     setActiveFile(null);
@@ -71,15 +60,16 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
 
   const fileListWithStatus = useMemo(() => {
     if (!isCompare) {
-      const files = getFilesForTab(items[0]);
+      // ✅ [수정] items[0] 객체에서 id를 추출하여 전달합니다.
+      const files = getFilesForTab(items[0].id);
       return files.map(name => ({ name, status: 'single' as const }));
     }
 
-    const itemA = isCurrentCompare ? (items.includes('live') ? 'live' : 'current') : items[0];
-    const itemB = isCurrentCompare ? items.find(item => item !== 'current' && item !== 'live')! : items[1];
+    const itemA_id = isCurrentCompare ? (items.find(item => item.id === 'live' || item.id === 'current')!.id) : items[0].id;
+    const itemB_id = isCurrentCompare ? (items.find(item => item.id !== 'live' && item.id !== 'current')!.id) : items[1].id;
 
-    const filesA = getFilesForTab(itemA);
-    const filesB = getFilesForTab(itemB);
+    const filesA = getFilesForTab(itemA_id);
+    const filesB = getFilesForTab(itemB_id);
     const allFiles = Array.from(new Set([...filesA, ...filesB])).sort();
 
     const filesWithStatus = allFiles.map(file => {
@@ -89,9 +79,8 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
       if (!inA && inB) return { name: file, status: 'itemB_only' as const };
       if (inA && !inB) return { name: file, status: 'itemA_only' as const };
 
-      // 양쪽에 모두 존재하는 경우 내용 비교
-      const dataA = getData(itemA, file);
-      const dataB = getData(itemB, file);
+      const dataA = getData(itemA_id, file);
+      const dataB = getData(itemB_id, file);
       const isIdentical = dataA === dataB;
 
       return {
@@ -115,21 +104,20 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
     return '';
   };
 
-  const highlightDiffs = (text: string, itemIndex: number) => {
+  // ✅ [수정] itemIndex 대신 currentItemId를 받아 처리하도록 변경
+  const highlightDiffs = (text: string, currentItemId: string) => {
     if (!isCompare || !activeFile) {
         return <pre className="json-viewer">{text}</pre>;
     }
 
     const lines = text.split('\n');
-    let otherItemId: string;
-
-    if (isCurrentCompare) {
-      otherItemId = itemIndex === 0 ? items.find(item => item !== 'current' && item !== 'live')! : (items.includes('live') ? 'live' : 'current');
-    } else {
-      otherItemId = items[1 - itemIndex];
+    // ✅ [수정] 다른 아이템의 id를 찾습니다.
+    const otherItem = items.find(item => item.id !== currentItemId);
+    if (!otherItem) {
+        return <pre className="json-viewer">{text}</pre>;
     }
+    const otherText = getData(otherItem.id, activeFile);
 
-    const otherText = getData(otherItemId, activeFile);
     if (!otherText) {
         return <pre className="json-viewer">{text}</pre>;
     }
@@ -139,16 +127,21 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
         {lines.map((line, index) => {
           const trimmedLine = line.trim();
           const isDifferent = trimmedLine.length > 0 && !otherText.includes(trimmedLine);
-          const className = isDifferent ? (itemIndex === 0 ? 'diff-removed' : 'diff-added') : '';
+          // ✅ [수정] itemIndex 대신, 현재 아이템이 비교 쌍의 첫 번째 아이템인지 여부로 클래스를 결정합니다.
+          const isFirstItem = items[0].id === currentItemId;
+          const className = isDifferent ? (isFirstItem ? 'diff-removed' : 'diff-added') : '';
           return <div key={index} className={`code-line ${className}`}>{line || ' '}</div>;
         })}
       </div>
     );
   };
 
-  const renderContentView = (itemId: string, itemIndex: number = 0) => {
+  const renderContentView = (itemId: string) => {
+    const currentItem = items.find(it => it.id === itemId);
+    const isApplied = currentItem?.status === 'ACTIVE';
+
     const title = itemId === 'current' || itemId === 'live' ? '현재 적용중' :
-                  itemId === items[0] && items[0] !== 'live' && items[0] !== 'current' ? `최종 백업 (${itemId})` : itemId;
+                  isApplied ? `최종 백업 (${itemId})` : itemId;
 
     if (!activeFile) {
       return (
@@ -201,13 +194,34 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
                 )}
               </div>
             )}
-            {isCompare ? highlightDiffs(fileData, itemIndex) : <pre className="json-viewer">{fileData}</pre>}
+            {/* ✅ [수정] highlightDiffs에 itemIndex 대신 itemId를 전달합니다. */}
+            {isCompare ? highlightDiffs(fileData, itemId) : <pre className="json-viewer">{fileData}</pre>}
         </div>
     );
   };
 
-  const itemA = isCurrentCompare ? (items.includes('live') ? 'live' : 'current') : items[0];
-  const itemB = isCurrentCompare ? items.find(item => item !== 'current' && item !== 'live')! : items[1];
+  const getFooterButtons = () => {
+    if (type === 'restore') {
+      return (
+        <>
+          <button className="btn btn-primary">복원</button>
+          <button className="btn btn-secondary" onClick={onClose}>닫기</button>
+        </>
+      );
+    } else if (type === 'manual_backup') {
+      return (
+        <>
+          <button className="btn btn-primary">백업</button>
+          <button className="btn btn-secondary" onClick={onClose}>닫기</button>
+        </>
+      );
+    } else {
+      return <button className="btn btn-secondary" onClick={onClose}>닫기</button>;
+    }
+  };
+
+  const itemA = isCurrentCompare ? (itemIds.includes('live') ? 'live' : 'current') : itemIds[0];
+  const itemB = isCurrentCompare ? itemIds.find(id => id !== 'current' && id !== 'live')! : itemIds[1];
 
   return (
     <div className="modal-overlay">
@@ -262,11 +276,11 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
             <section className="resource-content">
               {isCompare ? (
                 <>
-                  {renderContentView(itemA, 0)}
-                  {renderContentView(itemB, 1)}
+                  {renderContentView(itemA)}
+                  {renderContentView(itemB)}
                 </>
               ) : (
-                renderContentView(items[0])
+                renderContentView(items[0].id)
               )}
             </section>
           </div>

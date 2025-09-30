@@ -42,20 +42,30 @@ const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({onClose, data}) 
         }
     };
 
+    // snapshotId: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+    // accountId: backup.account,
+    // accountName: "HAE_Manager",
+    // regionCode: backup.region,
+    // regionName: AWS_REGIONS.find(r => r.code === backup.region)?.name || backup.region,
+    // scope: backup.region === 'aws-global' ? 'CLOUDFRONT' : 'REGIONAL',
+    // tagName: emergencyApprovalModal.backupId,
+    // status: 'ROLLBACK_INPROGRESS', // 긴급 승인 시 복원중으로 상태 변경
+    // issues: mockIssues,
+
     const currentStep = useMemo(() => {
-        switch (data.status) {
-            case 'NONE':
-            case 'REQUESTED':
-                return 1;
-            case 'WAITING_FOR_APPROVAL':
+        if (data.issues != undefined) {
+            if (data.status === 'ROLLBACK_WAIT_FOR_APPLY') {
                 return 2;
-            case 'PROCESSING':
+            } else if (data.status === 'ROLLBACK_INPROGRESS') {
                 return 3;
-            case 'COMPLETED':
+            } else if (data.status === 'ACTIVE') {
                 return 4;
-            default:
+            } else {
                 return 1;
+            }
         }
+
+        return 0;
     }, [data.status]);
 
     const statusMessages: { [key: number]: string } = {

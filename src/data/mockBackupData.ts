@@ -2,96 +2,92 @@
 import type { BackupItem, BackupStatus } from '../types/restore.types';
 
 export const mockBackupData: BackupItem[] = [
+  // --- 1. 123456789012 / global ---
   {
-    id: '20250112-150430',
+    id: '20250929-103000',
     account: '123456789012',
     region: 'aws-global',
-    type: '수동백업',
-    status: 'APPLIED',
-    jiraIssues: [],
-    issueCount: 0,
-    requiresManualBackup: false
-  },
-    {
-      id: '20250912-150430',
-      account: '123456789012',
-      region: 'ap-northeast-1',
-      type: '수동백업',
-      status: 'APPLIED',
-      jiraIssues: [],
-      issueCount: 0,
-      requiresManualBackup: true
-    },
-  {
-    id: '20241223-112030',
-    account: '123456789012',
-    region: 'aws-global',
-    type: '수동백업',
-    status: 'ARCHIVED',
-    jiraIssues: [],
-    issueCount: 0,
-    requiresManualBackup: false
-  },
-  {
-    id: '20241010-150530',
-    account: '123456789012',
-    region: 'aws-global',
-    type: '수동백업',
-    status: 'ROLLBACK_INPROGRESS',
-    jiraIssues: ['GCI-GW-001', 'GCI-GW-002'],
-    issueCount: 2,
-    rollbackStatus: 'VIEW_DETAIL',
-    requiresManualBackup: false
-  },
-  {
-    id: '20240615-152230',
-    account: '123456789012',
-    region: 'ap-northeast-2',
     type: '자동백업',
     status: 'ARCHIVED',
-    jiraIssues: ['GCI-GW-003'],
-    issueCount: 1,
-    rollbackStatus: 'VIEW_DETAIL',
+    jiraIssues: [],
+    issueCount: 0,
     requiresManualBackup: false
   },
   {
-    id: '20250915-152230',
+    id: '20250929-111530',
     account: '123456789012',
+    region: 'aws-global',
+    type: '자동백업',
+    status: 'ROLLBACK_INPROGRESS',
+    jiraIssues: ['GCI-101', 'GCI-102'],
+    issueCount: 2,
+    requiresManualBackup: false
+  },
+  {
+    id: '20250929-120500',
+    account: '123456789012',
+    region: 'aws-global',
+    type: '자동백업',
+    status: 'ACTIVE',
+    jiraIssues: [],
+    issueCount: 0,
+    requiresManualBackup: false
+  },
+
+  // --- 2. 123456789012 / us-east-1 ---
+  {
+    id: '20250928-094510',
+    account: '123456789012',
+    region: 'us-east-1',
+    type: '수동백업',
+    status: 'ACTIVE',
+    jiraIssues: [],
+    issueCount: 0,
+    requiresManualBackup: true
+  },
+
+  // --- 3. 987654321098 / ap-northeast-2 ---
+  {
+    id: '20250927-142000',
+    account: '987654321098',
+    region: 'ap-northeast-2',
+    type: '수동백업',
+    status: 'ARCHIVED',
+    jiraIssues: [],
+    issueCount: 0,
+    requiresManualBackup: false
+  },
+  {
+    id: '20250927-150005',
+    account: '987654321098',
     region: 'ap-northeast-2',
     type: '수동백업',
     status: 'ROLLBACK_WAIT_FOR_APPLY',
-    jiraIssues: ['GCI-GW-004', 'GCI-GW-005', 'GCI-GW-006'],
-    issueCount: 3,
-    requiresManualBackup: false
-  },
-  {
-    id: '20250101-093000',
-    account: '987654321098',
-    region: 'us-east-1',
-    type: '자동백업',
-    status: 'ARCHIVED',
-    jiraIssues: [],
-    issueCount: 0,
-    requiresManualBackup: false
-  },
-  {
-    id: '20241215-141500',
-    account: '987654321098',
-    region: 'eu-west-1',
-    type: '수동백업',
-    status: 'ROLLBACK_INPROGRESS',
-    jiraIssues: ['GCI-GW-007'],
+    jiraIssues: ['GCI-201'],
     issueCount: 1,
     rollbackStatus: 'VIEW_DETAIL',
     requiresManualBackup: false
-  }
+  },
+
+  // --- 4. 기타 샘플 데이터 ("적용중" 상태) ---
+  {
+    id: '20250926-185559',
+    account: '123456789012',
+    region: 'eu-west-1',
+    type: '자동백업',
+    status: 'ACTIVE', // 적용중
+    jiraIssues: [],
+    issueCount: 0,
+    requiresManualBackup: false,
+  },
 ];
+
 
 // 상태별 배지 클래스 반환
 export const getStatusBadgeClass = (status: BackupStatus): string => {
   switch (status) {
     case 'INIT': return 'badge-secondary';
-    case 'APPLIED': return 'badge-success';
+    case 'ACTIVE': return 'badge-success';
     case 'ARCHIVED': return 'badge-secondary';
     case 'ROLLBACK_WAIT_FOR_APPLY': return 'badge-warning';
     case 'ROLLBACK_INPROGRESS': return 'badge-restoring';
@@ -103,7 +99,7 @@ export const getStatusBadgeClass = (status: BackupStatus): string => {
 export const getStatusText = (status: BackupStatus): string => {
   switch (status) {
     case 'INIT': return '초기상태';
-    case 'APPLIED': return '적용중';
+    case 'ACTIVE': return '적용중';
     case 'ARCHIVED': return '보관됨';
     case 'ROLLBACK_WAIT_FOR_APPLY': return '복원대기';
     case 'ROLLBACK_INPROGRESS': return '복원중';

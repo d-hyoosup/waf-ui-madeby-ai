@@ -18,7 +18,7 @@ const JiraApprovalModal: React.FC<JiraApprovalModalProps> = ({ onClose, data }) 
     regionName: "미국 동부(버지니아 북부)",
     scope: "REGIONAL",
     tagName: "20250901-111052",
-    status: "WAITING_FOR_APPROVAL",
+    status: "ROLLBACK_WAIT_FOR_APPLY",
     issues: [
       {
         issueKey: "GCI-51",

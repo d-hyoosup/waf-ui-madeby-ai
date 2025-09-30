@@ -1,5 +1,7 @@
 // src/types/restore.types.ts
-export type RollbackStatus = 'NONE' | 'REQUESTED' | 'WAITING_FOR_APPROVAL' | 'PROCESSING' | 'COMPLETED';
+
+export type BackupStatus = 'INIT' | 'ACTIVE' | 'ARCHIVED' | 'ROLLBACK_WAIT_FOR_APPLY' | 'ROLLBACK_INPROGRESS';
+
 export type InterruptFlag = 'CANCEL' | 'FORCE_APPROVED' | 'NONE' | string;
 
 export interface JiraIssue {
@@ -16,14 +18,11 @@ export interface RestoreData {
   regionName: string;
   scope: string;
   tagName: string;
-  status: RollbackStatus;
+  status: BackupStatus;
   issues: JiraIssue[];
   showEmergencyApproval?: boolean;
   showCancelProcess?: boolean;
 }
-
-// ✅ [수정] BackupStatus 타입 업데이트
-export type BackupStatus = 'INIT' | 'APPLIED' | 'ARCHIVED' | 'ROLLBACK_WAIT_FOR_APPLY' | 'ROLLBACK_INPROGRESS';
 
 export interface BackupItem {
   id: string;
