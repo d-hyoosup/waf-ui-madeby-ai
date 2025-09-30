@@ -1,8 +1,8 @@
 // src/pages/AccountManagement.tsx
 import { useState } from 'react';
-import PageContainer from '../components/PageContainer';
-import AccountTable from '../components/AccountTable';
-import AddAccountModal from '../components/AddAccountModal';
+import PageContainer from '../../components/common/PageContainer.tsx';
+import AccountTable from './AccountTable.tsx';
+import AddAccountModal from './AddAccountModal.tsx';
 
 const AccountManagement = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);

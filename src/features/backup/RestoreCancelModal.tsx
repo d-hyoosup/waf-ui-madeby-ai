@@ -1,6 +1,6 @@
 // src/components/RestoreCancelModal.tsx
 import React, { useState } from 'react';
-import './ModalStyles.css';
+import '../../components/styles/ModalStyles.css';
 
 interface RestoreCancelModalProps {
   onClose: () => void;

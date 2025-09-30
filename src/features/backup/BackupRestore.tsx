@@ -1,15 +1,15 @@
 // src/pages/BackupRestore.tsx
 import { useState, useMemo } from 'react';
-import PageContainer from '../components/PageContainer';
-import BackupHistoryTable from '../components/BackupHistoryTable';
-import ResourceViewModal from '../components/ResourceViewModal';
-import RestoreStatusModal from '../components/RestoreStatusModal';
-import EmergencyApprovalModal from '../components/EmergencyApprovalModal';
-import RestoreCancelModal from '../components/RestoreCancelModal';
-import type { RestoreData, JiraIssue, BackupItem, InterruptFlag, BackupStatus } from '../types/restore.types';
-import { mockBackupData } from '../data/mockBackupData';
-import { AWS_REGIONS } from '../constants/awsRegions';
-import '../components/FilterStyles.css';
+import PageContainer from '../../components/common/PageContainer.tsx';
+import BackupHistoryTable from './BackupHistoryTable.tsx';
+import ResourceViewModal from './ResourceViewModal.tsx';
+import RestoreStatusModal from './RestoreStatusModal.tsx';
+import EmergencyApprovalModal from './EmergencyApprovalModal.tsx';
+import RestoreCancelModal from './RestoreCancelModal.tsx';
+import type { RestoreData, JiraIssue, BackupItem, InterruptFlag, BackupStatus } from '../../types/restore.types.ts';
+import { mockBackupData } from '../../data/mockBackupData.ts';
+import { AWS_REGIONS } from '../../constants/awsRegions.ts';
+import '../../components/styles/FilterStyles.css';
 
 interface ResourceViewItem {
   id: string;
@@ -67,7 +67,7 @@ const BackupRestore = () => {
                 setResourceViewModal({
                                     type: 'restore',
                                     items: [
-                                        { id: 'live', status: 'ACTIVE' },
+                                        { id: 'live', status: 'APPLIED' },
                                         { id: selectedItem.id, status: selectedItem.status }
                                     ]
                                 });
@@ -94,7 +94,7 @@ const BackupRestore = () => {
             setResourceViewModal({
                 type: 'compare',
                 items: [
-                    { id: 'live', status: 'ACTIVE' },
+                    { id: 'live', status: 'APPLIED' },
                     ...selectedBackupItems
                 ]
             });
@@ -115,7 +115,7 @@ const BackupRestore = () => {
                 setResourceViewModal({
                     type: 'manual_backup',
                     items: [
-                        { id: 'live', status: 'ACTIVE' },
+                        { id: 'live', status: 'APPLIED' },
                         { id: selectedItem.id, status: selectedItem.status }
                     ]
                 });

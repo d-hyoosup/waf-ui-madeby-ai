@@ -1,6 +1,6 @@
 // src/components/AddAccountModal.tsx
 import { useState } from 'react';
-import './ModalStyles.css';
+import '../../components/styles/ModalStyles.css';
 
 interface AddAccountModalProps {
   onClose: () => void;

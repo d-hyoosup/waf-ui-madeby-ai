@@ -1,6 +1,6 @@
 // src/types/restore.types.ts
 
-export type BackupStatus = 'INIT' | 'ACTIVE' | 'ARCHIVED' | 'ROLLBACK_WAIT_FOR_APPLY' | 'ROLLBACK_INPROGRESS';
+export type BackupStatus = 'INIT' | 'APPLIED' | 'ARCHIVED' | 'ROLLBACK_WAIT_FOR_APPLY' | 'ROLLBACK_INPROGRESS';
 
 export type InterruptFlag = 'CANCEL' | 'FORCE_APPROVED' | 'NONE' | string;
 

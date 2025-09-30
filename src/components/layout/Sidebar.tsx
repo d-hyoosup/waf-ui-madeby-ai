@@ -1,7 +1,7 @@
 // src/components/Sidebar.tsx
 import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
-import { AccountIcon, SettingsIcon, BackupIcon } from './Icons'; // SVG 아이콘
+import { AccountIcon, SettingsIcon, BackupIcon } from '../common/Icons.tsx'; // SVG 아이콘
 
 const Sidebar = () => {
   return (

@@ -1,8 +1,8 @@
 // src/components/RestoreStatusModal.tsx
 import React, {useEffect, useMemo, useState} from 'react';
-import type {JiraIssue, RestoreData} from '../types/restore.types';
+import type {JiraIssue, RestoreData} from '../../types/restore.types.ts';
 import './RestoreStatusModal.css';
-import {ExternalLinkIcon} from './Icons';
+import {ExternalLinkIcon} from '../../components/common/Icons.tsx';
 
 interface RestoreStatusModalProps {
     onClose: () => void;
@@ -58,7 +58,7 @@ const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({onClose, data}) 
                 return 2;
             } else if (data.status === 'ROLLBACK_INPROGRESS') {
                 return 3;
-            } else if (data.status === 'ACTIVE') {
+            } else if (data.status === 'APPLIED') {
                 return 4;
             } else {
                 return 1;

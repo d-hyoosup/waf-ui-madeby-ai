@@ -1,9 +1,9 @@
 // src/components/ResourceViewModal.tsx
 import React, { useState, useMemo } from 'react';
-import './ModalStyles.css';
+import '../../components/styles/ModalStyles.css';
 import './ResourceViewModal.css';
-import { mockBackupResourceData, mockCurrentResourceData } from '../data/mockResourceData';
-import type {BackupStatus} from '../types/restore.types';
+import { mockBackupResourceData, mockCurrentResourceData } from '../../data/mockResourceData.ts';
+import type {BackupStatus} from '../../types/restore.types.ts';
 
 // Props 타입 정의
 interface ResourceViewItem {
@@ -35,7 +35,7 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
     if (type === 'compare') return 'WAF Rule 비교';
     if (type === 'view') {
         const item = items[0];
-        const prefix = item.status === 'ACTIVE' ? '최종 백업 조회: ' : '백업 조회: ';
+        const prefix = item.status === 'APPLIED' ? '최종 백업 조회: ' : '백업 조회: ';
         return `${prefix}${item.id}`;
     }
     return '리소스 보기';
@@ -138,7 +138,7 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
 
   const renderContentView = (itemId: string) => {
     const currentItem = items.find(it => it.id === itemId);
-    const isApplied = currentItem?.status === 'ACTIVE';
+    const isApplied = currentItem?.status === 'APPLIED';
 
     const title = itemId === 'current' || itemId === 'live' ? '현재 적용중' :
                   isApplied ? `최종 백업 (${itemId})` : itemId;

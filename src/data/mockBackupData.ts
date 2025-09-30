@@ -28,7 +28,7 @@ export const mockBackupData: BackupItem[] = [
     account: '123456789012',
     region: 'aws-global',
     type: '자동백업',
-    status: 'ACTIVE',
+    status: 'APPLIED',
     jiraIssues: [],
     issueCount: 0,
     requiresManualBackup: false
@@ -40,7 +40,7 @@ export const mockBackupData: BackupItem[] = [
     account: '123456789012',
     region: 'us-east-1',
     type: '수동백업',
-    status: 'ACTIVE',
+    status: 'APPLIED',
     jiraIssues: [],
     issueCount: 0,
     requiresManualBackup: true
@@ -75,7 +75,7 @@ export const mockBackupData: BackupItem[] = [
     account: '123456789012',
     region: 'eu-west-1',
     type: '자동백업',
-    status: 'ACTIVE', // 적용중
+    status: 'APPLIED', // 적용중
     jiraIssues: [],
     issueCount: 0,
     requiresManualBackup: false,
@@ -87,7 +87,7 @@ export const mockBackupData: BackupItem[] = [
 export const getStatusBadgeClass = (status: BackupStatus): string => {
   switch (status) {
     case 'INIT': return 'badge-secondary';
-    case 'ACTIVE': return 'badge-success';
+    case 'APPLIED': return 'badge-success';
     case 'ARCHIVED': return 'badge-secondary';
     case 'ROLLBACK_WAIT_FOR_APPLY': return 'badge-warning';
     case 'ROLLBACK_INPROGRESS': return 'badge-restoring';
@@ -99,7 +99,7 @@ export const getStatusBadgeClass = (status: BackupStatus): string => {
 export const getStatusText = (status: BackupStatus): string => {
   switch (status) {
     case 'INIT': return '초기상태';
-    case 'ACTIVE': return '적용중';
+    case 'APPLIED': return '적용중';
     case 'ARCHIVED': return '보관됨';
     case 'ROLLBACK_WAIT_FOR_APPLY': return '복원대기';
     case 'ROLLBACK_INPROGRESS': return '복원중';

@@ -1,6 +1,6 @@
 // src/components/PageContainer.tsx
 import React from 'react';
-import './PageContainer.css';
+import '../styles/PageContainer.css';
 
 interface PageContainerProps {
   title: string;

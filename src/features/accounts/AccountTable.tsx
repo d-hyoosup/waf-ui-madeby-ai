@@ -1,6 +1,6 @@
 // src/components/AccountTable.tsx
-import './TableStyles.css';
-import { TrashIcon, EditIcon, NotificationIcon } from './Icons';
+import '../../components/styles/TableStyles.css';
+import { TrashIcon, EditIcon, NotificationIcon } from '../../components/common/Icons.tsx';
 import { useNavigate } from 'react-router-dom';
 
 const AccountTable = () => {

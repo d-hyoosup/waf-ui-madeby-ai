@@ -1,8 +1,8 @@
 // src/components/AllRegionsSettingsTab.tsx
 import { useState, useMemo } from 'react';
-import './TableStyles.css';
-import './FilterStyles.css';
-import { AWS_REGIONS } from '../constants/awsRegions';
+import '../../components/styles/TableStyles.css';
+import '../../components/styles/FilterStyles.css';
+import { AWS_REGIONS } from '../../constants/awsRegions.ts';
 
 interface Setting {
     id: string;

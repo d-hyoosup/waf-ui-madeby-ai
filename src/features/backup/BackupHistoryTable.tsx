@@ -1,15 +1,15 @@
 // src/components/BackupHistoryTable.tsx
 import React, { useMemo, useState } from 'react';
-import './TableStyles.css';
-import { ExternalLinkIcon } from './Icons';
-import type { BackupItem } from '../types/restore.types';
+import '../../components/styles/TableStyles.css';
+import { ExternalLinkIcon } from '../../components/common/Icons.tsx';
+import type { BackupItem } from '../../types/restore.types.ts';
 import {
     getStatusBadgeClass,
     getStatusText,
     getRollbackActionText,
     getRollbackActionBadgeClass
-} from '../data/mockBackupData';
-import { getRegionDisplayName } from '../constants/awsRegions';
+} from '../../data/mockBackupData.ts';
+import { getRegionDisplayName } from '../../constants/awsRegions.ts';
 
 interface BackupHistoryTableProps {
     data: BackupItem[];

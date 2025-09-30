@@ -1,9 +1,9 @@
 // src/App.tsx
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Layout from './components/Layout';
-import AccountManagement from './pages/AccountManagement';
-import ManageSettings from './pages/ManageSettings';
-import BackupRestore from './pages/BackupRestore';
+import Layout from './components/layout/Layout.tsx';
+import AccountManagement from './features/accounts/AccountManagement.tsx';
+import ManageSettings from './features/settings/ManageSettings.tsx';
+import BackupRestore from './features/backup/BackupRestore.tsx';
 
 function App() {
   return (

@@ -1,10 +1,10 @@
 // src/pages/ManageSettings.tsx
 import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import PageContainer from '../components/PageContainer';
-import AllRegionsSettingsTab from '../components/AllRegionsSettingsTab';
-import AlertSettingsTabContent from '../components/AlertSettingsTabContent';
-import './PageStyles.css';
+import PageContainer from '../../components/common/PageContainer.tsx';
+import AllRegionsSettingsTab from './AllRegionsSettingsTab.tsx';
+import AlertSettingsTabContent from './AlertSettingsTabContent.tsx';
+import '../../pages/PageStyles.css';
 
 const ManageSettings = () => {
   const location = useLocation();
@@ -18,7 +18,7 @@ const ManageSettings = () => {
           className={`tab-button ${activeTab === 'allRegions' ? 'active' : ''}`}
           onClick={() => setActiveTab('allRegions')}
         >
-          전체 리전 설정
+          관리 설정
         </button>
         <button
           className={`tab-button ${activeTab === 'alert' ? 'active' : ''}`}

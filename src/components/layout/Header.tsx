@@ -1,6 +1,6 @@
 // src/components/Header.tsx
 import './Header.css';
-import userAvatar from '../assets/user-avatar.png'; // 예시 아바타 이미지
+import userAvatar from '../../assets/user-avatar.png'; // 예시 아바타 이미지
 
 const Header = () => {
   return (

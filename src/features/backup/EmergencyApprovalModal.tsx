@@ -1,6 +1,6 @@
 // src/components/EmergencyApprovalModal.tsx
 import React, { useState } from 'react';
-import './ModalStyles.css';
+import '../../components/styles/ModalStyles.css';
 
 interface EmergencyApprovalModalProps {
   onClose: () => void;
