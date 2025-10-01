@@ -9,7 +9,7 @@ import RestoreCancelModal from './RestoreCancelModal.tsx';
 import type { RestoreData, BackupItem as BackupItemType, BackupStatus } from '../../types/api.types.ts';
 import { AWS_REGIONS } from '../../constants/awsRegions.ts';
 import '../../components/styles/FilterStyles.css';
-import { getSnapshots, forceRollback, cancelRollback, manualBackup, getJiraIssues } from '../../api/backupService.ts';
+import { BackupService } from '../../api/index.ts';
 
 interface ResourceViewItem {
   id: string; // snapshotId
@@ -20,7 +20,7 @@ interface ResourceViewItem {
 const BackupRestore = () => {
     const [backupData, setBackupData] = useState<BackupItemType[]>([]);
     const [loading, setLoading] = useState(true);
-    const [selectedItems, setSelectedItems] = useState<string[]>([]); // snapshotId list
+    const [selectedItems, setSelectedItems] = useState<string[]>([]);
     const [resourceViewModal, setResourceViewModal] = useState<{
         type: 'view' | 'compare' | 'restore' | 'manual_backup' | null;
         items: ResourceViewItem[]
@@ -29,17 +29,16 @@ const BackupRestore = () => {
     const [restoreProcessData, setRestoreProcessData] = useState<RestoreData | null>(null);
     const [emergencyApprovalModal, setEmergencyApprovalModal] = useState({ open: false, backupId: '' });
     const [restoreCancelModal, setRestoreCancelModal] = useState({ open: false, backupId: '' });
-
     const [filters, setFilters] = useState({ account: '', region: '', backupType: '' });
 
     const fetchSnapshots = async () => {
         setLoading(true);
         try {
-            const response = await getSnapshots({ page: 1, pageSize: 100 });
-            const formattedData: BackupItemType[] = response.content.map(item => ({
+            const response = await BackupService.getSnapshots({ page: 1, pageSize: 100 });
+            const formattedData: BackupItemType[] = response.content.map((item: any) => ({
                 ...item,
                 id: item.snapshotId,
-                account: item.accountId, // 호환성을 위해 account 속성 추가
+                account: item.accountId,
                 region: item.regionCode,
                 type: item.backupType === 'AUTO' ? '자동백업' : '수동백업',
                 issueCount: item.jiraIssues?.length || 0,
@@ -68,17 +67,11 @@ const BackupRestore = () => {
     const uniqueAccounts = useMemo(() => [...new Set(backupData.map(item => item.accountId))], [backupData]);
     const uniqueRegions = useMemo(() => [...new Set(backupData.map(item => item.regionCode))], [backupData]);
 
-    const handleSelectionChange = (newSelection: string[]) => {
-        setSelectedItems(newSelection);
-    };
-
     const numSelected = selectedItems.length;
     const selectedItem = useMemo(() => filteredData.find(item => selectedItems.includes(item.id)), [filteredData, selectedItems]);
 
-    const handleViewClick = () => {
-        if (numSelected === 1 && selectedItem) {
-            setResourceViewModal({ type: 'view', items: [{ id: selectedItem.id, status: selectedItem.status, scopeId: selectedItem.scopeId }] });
-        }
+    const handleSelectionChange = (newSelection: string[]) => {
+        setSelectedItems(newSelection);
     };
 
     const handleCompare = () => {
@@ -97,7 +90,7 @@ const BackupRestore = () => {
         if (numSelected === 1 && selectedItem && selectedItem.requiresManualBackup) {
             if (window.confirm(`'${selectedItem.accountName}(${selectedItem.regionName})'의 현재 WAF 설정을 수동 백업하시겠습니까?`)) {
                 try {
-                    await manualBackup(selectedItem.scopeId);
+                    await BackupService.manualBackup(selectedItem.scopeId);
                     alert('수동 백업 요청이 완료되었습니다.');
                     fetchSnapshots();
                 } catch(error) {
@@ -107,16 +100,17 @@ const BackupRestore = () => {
         }
     };
 
-    const handleRestoreClick = () => {
-        if (numSelected === 1 && selectedItem && selectedItem.status === 'ARCHIVED') {
-            setResourceViewModal({ type: 'restore', items: [{id: selectedItem.id, status: selectedItem.status, scopeId: selectedItem.scopeId}] });
+    const handleRestoreClick = (backupId: string) => {
+        const itemToRestore = filteredData.find(item => item.id === backupId);
+        if (itemToRestore) {
+             setResourceViewModal({ type: 'restore', items: [{id: itemToRestore.id, status: itemToRestore.status, scopeId: itemToRestore.scopeId}] });
         }
     };
 
     const handleEmergencyApprovalConfirm = async (approver: string, reason: string) => {
         const backupId = emergencyApprovalModal.backupId;
         try {
-            await forceRollback({ snapshotId: backupId, interruptedBy: approver, reason, jiraIssueKey: 'MANUAL-APPROVAL' });
+            await BackupService.forceRollback({ snapshotId: backupId, interruptedBy: approver, reason, jiraIssueKey: 'MANUAL-APPROVAL' });
             alert(`긴급 승인이 완료되었습니다.\n복원을 시작합니다.`);
             setEmergencyApprovalModal({ open: false, backupId: '' });
             fetchSnapshots();
@@ -128,7 +122,7 @@ const BackupRestore = () => {
     const handleRestoreCancelConfirm = async (requester: string, reason: string) => {
         const backupId = restoreCancelModal.backupId;
         try {
-            await cancelRollback({ snapshotId: backupId, interruptedBy: requester, reason, jiraIssueKey: 'MANUAL-CANCEL' });
+            await BackupService.cancelRollback({ snapshotId: backupId, interruptedBy: requester, reason, jiraIssueKey: 'MANUAL-CANCEL' });
             alert(`복원 취소가 요청되었습니다.`);
             setRestoreCancelModal({ open: false, backupId: '' });
             fetchSnapshots();
@@ -144,7 +138,7 @@ const BackupRestore = () => {
             setRestoreCancelModal({ open: true, backupId });
         } else if (action === 'VIEW_DETAIL') {
             try {
-                const data = await getJiraIssues(backupId);
+                const data = await BackupService.getJiraIssues(backupId);
                 setRestoreProcessData(data as RestoreData);
                 setRestoreModalOpen(true);
             } catch(error) {
@@ -154,16 +148,13 @@ const BackupRestore = () => {
     };
 
     const canManualBackup = numSelected === 1 && selectedItem?.requiresManualBackup;
-    const canRestore = numSelected === 1 && selectedItem?.status === 'ARCHIVED';
 
     return (
         <PageContainer
             title="WAF Rule 백업/복원"
             controls={
                 <div className="controls-group">
-                    <button className="btn btn-primary" onClick={handleRestoreClick} disabled={!canRestore}>복원</button>
                     <button className="btn btn-secondary" onClick={handleManualBackupClick} disabled={!canManualBackup}>수동 백업</button>
-                    <button className="btn btn-secondary" onClick={handleViewClick} disabled={numSelected !== 1}>백업 조회</button>
                     <button className="btn btn-secondary" onClick={handleCompare} disabled={numSelected === 0 || numSelected > 2}>비교</button>
                 </div>
             }
@@ -202,6 +193,7 @@ const BackupRestore = () => {
                     selectedItems={selectedItems}
                     onSelectionChange={handleSelectionChange}
                     onRestoreAction={handleRestoreAction}
+                    onRestoreClick={handleRestoreClick}
                 />
             )}
 

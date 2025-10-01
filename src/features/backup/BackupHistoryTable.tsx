@@ -4,47 +4,13 @@ import '../../components/styles/TableStyles.css';
 import { ExternalLinkIcon } from '../../components/common/Icons.tsx';
 import type { BackupItem, BackupStatus } from '../../types/api.types.ts';
 import { getRegionDisplayName } from '../../constants/awsRegions.ts';
-
-// Helper functions moved from deleted mockData file
-export const getStatusBadgeClass = (status: BackupStatus): string => {
-  switch (status) {
-    case 'INIT': return 'badge-secondary';
-    case 'APPLIED': return 'badge-success';
-    case 'ARCHIVED': return 'badge-secondary';
-    case 'ROLLBACK_WAIT_FOR_APPLY': return 'badge-warning';
-    case 'ROLLBACK_INPROGRESS': return 'badge-restoring';
-    default: return 'badge-secondary';
-  }
-};
-
-export const getStatusText = (status: BackupStatus): string => {
-  switch (status) {
-    case 'INIT': return '초기상태';
-    case 'APPLIED': return '적용중';
-    case 'ARCHIVED': return '보관됨';
-    case 'ROLLBACK_WAIT_FOR_APPLY': return '복원대기';
-    case 'ROLLBACK_INPROGRESS': return '복원중';
-    default: return status;
-  }
-};
-
-export const getRollbackActionText = (action: string): string => {
-  switch (action) {
-    case 'JIRA_APPROVAL_WAITING': return '긴급 승인';
-    case 'ROLLBACK_CANCEL': return '복원 취소';
-    case 'VIEW_DETAIL': return '상세 보기';
-    default: return '';
-  }
-};
-
-export const getRollbackActionBadgeClass = (action: string): string => {
-  switch (action) {
-    case 'JIRA_APPROVAL_WAITING': return 'badge-danger';
-    case 'ROLLBACK_CANCEL': return 'badge-warning';
-    case 'VIEW_DETAIL': return 'badge-info';
-    default: return 'badge-secondary';
-  }
-};
+// ✅ [수정] 분리된 유틸리티 함수들을 import 합니다.
+import {
+    getStatusBadgeClass,
+    getStatusText,
+    getRollbackActionText,
+    getRollbackActionBadgeClass
+} from './backupUtils.ts';
 
 
 interface BackupHistoryTableProps {
@@ -52,23 +18,25 @@ interface BackupHistoryTableProps {
     selectedItems: string[];
     onSelectionChange: (newSelection: string[]) => void;
     onRestoreAction: (action: string, backupId: string) => void;
+    onRestoreClick: (backupId: string) => void;
 }
 
-type SortField = 'id' | 'accountId' | 'region' | 'type' | 'status';
+type SortField = 'tagName' | 'accountId' | 'region' | 'type' | 'status';
 type SortOrder = 'asc' | 'desc';
 
 const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
     data,
     selectedItems,
     onSelectionChange,
-    onRestoreAction
+    onRestoreAction,
+    onRestoreClick,
 }) => {
     const [expandedIssues, setExpandedIssues] = useState<string | null>(null);
-    const [sortField, setSortField] = useState<SortField>('id');
+    const [sortField, setSortField] = useState<SortField>('tagName');
     const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
 
     const sortedData = useMemo(() => {
-        const sorted = [...data].sort((a, b) => {
+        return [...data].sort((a, b) => {
             const aValue = a[sortField];
             const bValue = b[sortField];
 
@@ -76,16 +44,11 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
             if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
             return 0;
         });
-        return sorted;
     }, [data, sortField, sortOrder]);
 
     const handleSort = (field: SortField) => {
-        if (sortField === field) {
-            setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-        } else {
-            setSortField(field);
-            setSortOrder('asc');
-        }
+        setSortField(field);
+        setSortOrder(current => (current === 'asc' ? 'desc' : 'asc'));
     };
 
     const getSortIcon = (field: SortField) => {
@@ -94,11 +57,7 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
     };
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.checked) {
-            onSelectionChange(data.map(item => item.id));
-        } else {
-            onSelectionChange([]);
-        }
+        onSelectionChange(e.target.checked ? data.map(item => item.id) : []);
     };
 
     const handleSelectItem = (id: string) => {
@@ -156,15 +115,18 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
     };
 
     const renderActionButtons = (item: BackupItem) => {
-        const showOnlyDetailButton = item.status === 'ROLLBACK_INPROGRESS' || (item.status === 'ARCHIVED' && (item.issueCount ?? 0) > 0);
+        const showDetailButton = item.status === 'ROLLBACK_IN_PROGRESS' || (item.status === 'ARCHIVED' && (item.issueCount ?? 0) > 0);
         const showAllButtons = item.status === 'ROLLBACK_WAIT_FOR_APPLY';
-
-
-        if (!showOnlyDetailButton && !showAllButtons) return null;
+        const showRestoreButton = item.status === 'ARCHIVED';
 
         return (
             <div className="action-badges">
-                {showOnlyDetailButton && (
+                {showRestoreButton && (
+                    <button className={`badge ${getRollbackActionBadgeClass('RESTORE')}`} onClick={() => onRestoreClick(item.id)}>
+                        {getRollbackActionText('RESTORE')}
+                    </button>
+                )}
+                {showDetailButton && !showAllButtons && (
                     <button className={`badge ${getRollbackActionBadgeClass('VIEW_DETAIL')}`} onClick={() => onRestoreAction('VIEW_DETAIL', item.id)}>
                         {getRollbackActionText('VIEW_DETAIL')}
                     </button>
@@ -194,11 +156,11 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
                         <th style={{ width: '4%' }}><input type="checkbox" onChange={handleSelectAll} checked={isAllSelected} /></th>
                         <th style={{ width: '12%', cursor: 'pointer' }} onClick={() => handleSort('accountId')}>Account{getSortIcon('accountId')}</th>
                         <th style={{ width: '14%', cursor: 'pointer' }} onClick={() => handleSort('region')}>리전{getSortIcon('region')}</th>
-                        <th style={{ width: '16%', cursor: 'pointer' }} onClick={() => handleSort('id')}>Tag (ID){getSortIcon('id')}</th>
+                        <th style={{ width: '16%', cursor: 'pointer' }} onClick={() => handleSort('tagName')}>Tag (ID){getSortIcon('tagName')}</th>
                         <th style={{ width: '10%', cursor: 'pointer' }} onClick={() => handleSort('type')}>백업 방식{getSortIcon('type')}</th>
                         <th style={{ width: '8%', cursor: 'pointer' }} onClick={() => handleSort('status')}>상태{getSortIcon('status')}</th>
                         <th style={{ width: '18%' }}>Jira 이슈</th>
-                        <th style={{ width: '18%' }}>작업</th>
+                        <th style={{ width: '18%' }}>동작</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -211,7 +173,7 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
                                 <td><input type="checkbox" checked={isSelected} onChange={() => handleSelectItem(item.id)} /></td>
                                 <td>{item.accountId}</td>
                                 <td>{getRegionDisplayName(item.region)}</td>
-                                <td><a href={`#gitlab-link-for-${item.id}`} target="_blank" rel="noopener noreferrer">{item.id} <ExternalLinkIcon /></a></td>
+                                <td><a href={`#gitlab-link-for-${item.tagName}`} target="_blank" rel="noopener noreferrer">{item.tagName} <ExternalLinkIcon /></a></td>
                                 <td>{item.type}</td>
                                 <td><span className={`badge ${getStatusBadgeClass(item.status)}`}>{getStatusText(item.status)}</span></td>
                                 <td>{renderJiraIssues(item)}</td>

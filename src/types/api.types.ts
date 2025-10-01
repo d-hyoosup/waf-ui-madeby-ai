@@ -98,7 +98,7 @@ export interface TemplateVariables {
 
 
 // 5. Backup & Restore
-export type BackupStatus = 'INIT' | 'APPLIED' | 'ARCHIVED' | 'ROLLBACK_WAIT_FOR_APPLY' | 'ROLLBACK_INPROGRESS';
+export type BackupStatus = 'INIT' | 'APPLIED' | 'ARCHIVED' | 'ROLLBACK_WAIT_FOR_APPLY' | 'ROLLBACK_IN_PROGRESS';
 export type InterruptFlag = 'CANCEL' | 'FORCE_APPROVED' | 'NONE' | string;
 
 export interface WafSnapshot {
@@ -119,9 +119,11 @@ export interface WafSnapshot {
 }
 
 export type BackupItem = WafSnapshot & {
-  id: string;
-  region: string;
+  id: string; // snapshotId와 동일
+  account: string; // accountId와 동일, 호환성을 위해 유지
+  region: string; // regionCode와 동일
   type: '자동백업' | '수동백업';
+  rollbackStatus?: 'JIRA_APPROVAL_WAITING' | 'ROLLBACK_CANCEL' | 'VIEW_DETAIL';
 };
 
 
@@ -166,7 +168,6 @@ export interface WafRuleDiffStatus {
     status: 'ADDED' | 'DELETED' | 'MODIFIED' | 'UNCHANGED';
 }
 
-// --- ✅ [수정] WAF 리소스 상세 타입 정의 ---
 interface WafVisibilityConfig {
   SampledRequestsEnabled: boolean;
   CloudWatchMetricsEnabled: boolean;
@@ -178,7 +179,7 @@ export interface WebAcl {
   Id: string;
   ARN: string;
   DefaultAction: { [key: string]: object };
-  Rules?: object[]; // 복잡성을 고려하여 우선 object로 유지
+  Rules?: object[];
   VisibilityConfig: WafVisibilityConfig;
 }
 
@@ -206,12 +207,8 @@ export interface RegexPatternSet {
   RegularExpressionList: { RegexString: string }[];
 }
 
-// --- ✅ [수정] WAF 리소스 Union 타입 생성 ---
 export type WafResource = WebAcl | IpSet | RuleGroup | RegexPatternSet;
 
-// --- ✅ [수정] WafRulePairContent 인터페이스 수정 ---
-// 'any' 대신 구체적인 Union 타입을 사용하고,
-// 파일이 한쪽에만 존재할 경우를 대비해 null을 허용합니다.
 export interface WafRulePairContent {
     base: WafResource | null;
     target: WafResource | null;

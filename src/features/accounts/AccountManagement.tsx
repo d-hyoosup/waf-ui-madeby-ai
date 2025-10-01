@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import PageContainer from '../../components/common/PageContainer.tsx';
 import AccountTable from './AccountTable.tsx';
 import AddAccountModal from './AddAccountModal.tsx';
-import { getAccounts } from '../../api/accountService.ts';
+import { AccountService } from '../../api/index.ts';
 import type { WafManagerAccount } from '../../types/api.types.ts';
 
 const AccountManagement = () => {
@@ -14,11 +14,10 @@ const AccountManagement = () => {
   const fetchAccounts = async () => {
     setLoading(true);
     try {
-      const response = await getAccounts({ page: 1, pageSize: 100 }); // Adjust paging as needed
+      const response = await AccountService.getAccounts({ page: 1, pageSize: 100 });
       setAccounts(response.content);
     } catch (error) {
       console.error("Failed to fetch accounts", error);
-      // Handle error UI
     } finally {
       setLoading(false);
     }
@@ -34,7 +33,6 @@ const AccountManagement = () => {
       fetchAccounts();
     }
   };
-
 
   return (
     <PageContainer
