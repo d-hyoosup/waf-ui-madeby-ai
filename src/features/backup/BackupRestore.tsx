@@ -9,7 +9,7 @@ import RestoreCancelModal from './RestoreCancelModal.tsx';
 import type { RestoreData, BackupItem as BackupItemType, BackupStatus } from '../../types/api.types.ts';
 import { AWS_REGIONS } from '../../constants/awsRegions.ts';
 import '../../components/styles/FilterStyles.css';
-import { BackupService } from '../../api/index.ts';
+import { BackupService } from '../../api';
 
 interface ResourceViewItem {
   id: string; // snapshotId

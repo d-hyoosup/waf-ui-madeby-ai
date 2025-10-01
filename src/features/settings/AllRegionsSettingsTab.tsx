@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import '../../components/styles/TableStyles.css';
 import '../../components/styles/FilterStyles.css';
 import { AWS_REGIONS } from '../../constants/awsRegions.ts';
-import { getSettings, updateSettings } from '../../api/settingService.ts';
+import { SettingService } from '../../api';
 import type { WafSetting, BackupType } from '../../types/api.types.ts';
 
 type SortField = 'accountId' | 'regionName' | 'managed' | 'backupType';
@@ -20,7 +20,7 @@ const AllRegionsSettingsTab = () => {
         const fetchSettings = async () => {
             setLoading(true);
             try {
-                const response = await getSettings({ page: 1, pageSize: 200 });
+                const response = await SettingService.getSettings({ page: 1, pageSize: 200 });
                 const settingsWithRegionName = response.content.map(s => ({
                     ...s,
                     regionName: AWS_REGIONS.find(r => r.code === s.region)?.name || s.region,
@@ -42,7 +42,7 @@ const AllRegionsSettingsTab = () => {
                 managed,
                 backupType,
             }));
-            await updateSettings(updateData);
+            await SettingService.updateSettings(updateData);
             alert('설정이 저장되었습니다.');
         } catch (error) {
             console.error("Failed to save settings", error);

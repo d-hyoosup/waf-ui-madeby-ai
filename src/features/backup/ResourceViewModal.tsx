@@ -2,8 +2,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import '../../components/styles/ModalStyles.css';
 import './ResourceViewModal.css';
-import { getSnapshotFiles, getFileContent, getFileContentPair } from '../../api/backupService';
-import type { BackupStatus } from '../../types/api.types';
+import { BackupService } from '../../api';
+import type { BackupStatus, WafRuleDiffStatus } from '../../types/api.types';
 
 interface ResourceViewItem {
   id: string;
@@ -17,14 +17,26 @@ interface ResourceViewModalProps {
   onClose: () => void;
 }
 
+const mapTabToApiResourceType = (tabName: string): string => {
+    switch (tabName) {
+        case "Web ACLs": return "WEB_ACL";
+        case "IP Sets": return "IP_SET";
+        case "Regex pattern": return "REGEX_PATTERN_SET";
+        case "Rule Groups": return "RULE_GROUP";
+        default: return "";
+    }
+};
+
+type FileStatus = 'ADDED' | 'DELETED' | 'MODIFIED' | 'UNCHANGED' | 'single';
+
 const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onClose }) => {
   const resourceTypes = ["Web ACLs", "IP Sets", "Regex pattern", "Rule Groups"];
   const [activeTab, setActiveTab] = useState(resourceTypes[0]);
   const [activeFile, setActiveFile] = useState<string | null>(null);
   const [showChangedOnly, setShowChangedOnly] = useState(false);
-  const [fileList, setFileList] = useState<{name: string, status: string}[]>([]);
-  const [contentA, setContentA] = useState('');
-  const [contentB, setContentB] = useState('');
+  const [fileList, setFileList] = useState<{name: string, status: FileStatus}[]>([]);
+  const [contentA, setContentA] = useState<string | null>(null);
+  const [contentB, setContentB] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const isCompare = type === 'compare' || type === 'restore' || type === 'manual_backup';
@@ -39,16 +51,28 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
     return { itemA: items[0], itemB: items[1] };
   }, [items, isCompare]);
 
+  // ✅ [수정] 비교 모드일 때 getDiffStatus를 호출하도록 로직 변경
   useEffect(() => {
     const fetchFiles = async () => {
         if (!itemA) return;
         setLoading(true);
         try {
-            const filesData = await getSnapshotFiles(itemA.id);
-            const currentTabFiles = filesData.find(f => f.resourceType.replace('_', ' ') === activeTab.replace('s', ''));
-            const files = currentTabFiles ? currentTabFiles.files.map(name => ({ name, status: 'single' })) : [];
-            setFileList(files);
+            const apiResourceType = mapTabToApiResourceType(activeTab);
 
+            if (isCompare && itemB) {
+                const diffStatusList = await BackupService.getDiffStatus(itemA.id, itemB.id === 'live' ? undefined : itemB.id);
+                const currentTabDiffs = diffStatusList.filter(d => d.resourceType === apiResourceType);
+                const files = currentTabDiffs.map(diff => ({
+                    name: diff.fileName,
+                    status: diff.status
+                }));
+                setFileList(files);
+            } else {
+                const filesData = await BackupService.getSnapshotFiles(itemA.id);
+                const currentTabFiles = filesData.find(f => f.resourceType === apiResourceType);
+                const files = currentTabFiles ? currentTabFiles.files.map(name => ({ name, status: 'single' as const })) : [];
+                setFileList(files);
+            }
         } catch (error) {
             console.error("Failed to fetch file list", error);
             setFileList([]);
@@ -58,27 +82,28 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
     };
     fetchFiles();
     setActiveFile(null);
-  }, [activeTab, itemA]);
+  }, [activeTab, itemA, itemB, isCompare]);
 
  useEffect(() => {
     const fetchContent = async () => {
         if (!activeFile || !itemA) return;
         setLoading(true);
-        setContentA('');
-        setContentB('');
+        setContentA(null);
+        setContentB(null);
         try {
-            const resourceType = activeTab.replace(' ', '_').toUpperCase();
+            const resourceType = mapTabToApiResourceType(activeTab);
             if (isCompare && itemB) {
-                const { base, target } = await getFileContentPair(itemA.id, resourceType, activeFile, itemB.id === 'live' ? undefined : itemB.id);
-                setContentA(base ? JSON.stringify(base, null, 2) : '파일 없음');
-                setContentB(target ? JSON.stringify(target, null, 2) : '파일 없음');
+                const { base, target } = await BackupService.getFileContentPair(itemA.id, resourceType, activeFile, itemB.id === 'live' ? undefined : itemB.id);
+                setContentA(base ? JSON.stringify(base, null, 2) : null);
+                setContentB(target ? JSON.stringify(target, null, 2) : null);
             } else {
-                const content = await getFileContent(itemA.id, resourceType, activeFile);
-                setContentA(JSON.stringify(content, null, 2));
+                const content = await BackupService.getFileContent(itemA.id, resourceType, activeFile);
+                setContentA(content ? JSON.stringify(content, null, 2) : null);
             }
         } catch (error) {
             console.error("Failed to fetch file content", error);
-            setContentA('콘텐츠를 불러오는 데 실패했습니다.');
+            setContentA(null);
+            setContentB(null);
         } finally {
             setLoading(false);
         }
@@ -96,12 +121,24 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
     return 'WAF Rule 백업 조회';
   }, [type]);
 
-  const renderContentPane = (content: string, title: string) => {
+  const renderContentPane = (content: string | null, title: string) => {
     return (
         <div className="content-pane">
             <h4 className="content-pane-title">{title}</h4>
-            <div className="json-viewer-container">
-                {loading ? <p>Loading content...</p> : <pre className="json-viewer">{content}</pre>}
+            <div className={`json-viewer-container ${!content ? 'empty' : ''}`}>
+                {loading ? (
+                    <div className="empty-state"><p>Loading content...</p></div>
+                ) : content ? (
+                    <pre className="json-viewer">{content}</pre>
+                ) : (
+                    <div className="empty-state">
+                        <div className="empty-state-content">
+                            <div className="empty-icon">📄</div>
+                            <h4>파일 없음</h4>
+                            <p>이 형상에는 해당 파일이 존재하지 않습니다.</p>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -139,12 +176,33 @@ const ResourceViewModal: React.FC<ResourceViewModalProps> = ({ type, items, onCl
                         </div>
                     )}
                     {loading ? <p>Loading files...</p> : (
+                        // ✅ [수정] 파일 목록 렌더링 시 상태 뱃지와 색상 표시 로직 추가
                         <ul className="file-list">
-                            {fileList.map(({ name }) => (
-                            <li key={name} className={activeFile === name ? 'active' : ''} onClick={() => setActiveFile(name)}>
-                                <span className="file-name">{name}</span>
-                            </li>
-                            ))}
+                            {fileList
+                                .filter(file => !showChangedOnly || (file.status !== 'UNCHANGED' && file.status !== 'single'))
+                                .map(file => {
+                                    const statusMap = {
+                                        'DELETED': { text: '삭제됨', cssClass: 'itemA_only' },
+                                        'ADDED': { text: '추가됨', cssClass: 'itemB_only' },
+                                        'MODIFIED': { text: '수정됨', cssClass: 'modified' },
+                                        'UNCHANGED': { text: '동일', cssClass: 'identical' },
+                                        'single': { text: '-', cssClass: 'single' },
+                                    };
+                                    const statusInfo = statusMap[file.status];
+
+                                    return (
+                                        <li
+                                            key={file.name}
+                                            className={activeFile === file.name ? 'active' : ''}
+                                            onClick={() => setActiveFile(file.name)}
+                                            data-status={statusInfo.cssClass}
+                                        >
+                                            <span className={`file-status-indicator status-${statusInfo.cssClass}`} />
+                                            <span className="file-name">{file.name}</span>
+                                            {isCompare && <span className="file-status-tag">{statusInfo.text}</span>}
+                                        </li>
+                                    );
+                                })}
                         </ul>
                     )}
                 </aside>

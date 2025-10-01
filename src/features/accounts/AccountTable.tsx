@@ -3,7 +3,7 @@ import '../../components/styles/TableStyles.css';
 import { TrashIcon, EditIcon, NotificationIcon } from '../../components/common/Icons.tsx';
 import { useNavigate } from 'react-router-dom';
 import type { WafManagerAccount } from '../../types/api.types.ts';
-import { deleteAccount } from '../../api/accountService.ts';
+import { AccountService } from '../../api';
 
 interface AccountTableProps {
     accounts: WafManagerAccount[];
@@ -24,7 +24,7 @@ const AccountTable: React.FC<AccountTableProps> = ({ accounts, onRefresh }) => {
     const handleDeleteClick = async (accountId: string, accountName: string) => {
         if (window.confirm(`정말로 계정 '${accountName} (${accountId})'을(를) 삭제하시겠습니까?`)) {
             try {
-                await deleteAccount(accountId);
+                await AccountService.deleteAccount(accountId);
                 alert(`계정 '${accountName}'이(가) 삭제되었습니다.`);
                 onRefresh();
             } catch (error) {

@@ -1,7 +1,7 @@
 // src/features/accounts/AddAccountModal.tsx
 import { useState } from 'react';
 import '../../components/styles/ModalStyles.css';
-import { getAccountById, addAccount } from '../../api/accountService.ts';
+import { AccountService } from '../../api';
 
 interface AddAccountModalProps {
   onClose: (shouldRefetch: boolean) => void;
@@ -21,7 +21,7 @@ const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose }) => {
     setIsLoading(true);
     setError('');
     try {
-      const account = await getAccountById(accountId);
+      const account = await AccountService.getAccountById(accountId);
       setAccountName(account.accountName);
     } catch (err) {
       setError('계정 정보를 조회할 수 없습니다.');
@@ -39,7 +39,7 @@ const AddAccountModal: React.FC<AddAccountModalProps> = ({ onClose }) => {
       setIsLoading(true);
       setError('');
       try {
-          await addAccount({ accountId, accountName });
+          await AccountService.addAccount({ accountId, accountName });
           alert('계정이 성공적으로 추가되었습니다.');
           onClose(true);
       } catch (err: any) {

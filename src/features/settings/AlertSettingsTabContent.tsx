@@ -5,10 +5,7 @@ import { TrashIcon } from '../../components/common/Icons.tsx';
 import '../../components/styles/TableStyles.css';
 import TreeView from '../../components/common/TreeView.tsx';
 import { convertPathsToTreeData } from '../../utils/treeUtils.ts';
-import {
-    getNotifications, getNotificationDetail, addNotification,
-    updateNotification, deleteNotification, getActiveWafRules, getTemplateVariables
-} from '../../api/settingService.ts';
+import { SettingService } from '../../api';
 import type {
     NotificationSummary, NotificationDetail, NotificationResource
 } from '../../types/api.types.ts';
@@ -41,9 +38,9 @@ const AlertSettingsTabContent: React.FC = () => {
         setLoading(true);
         try {
             const [channelsRes, rulesRes, varsRes] = await Promise.all([
-                getNotifications({ page: 1, pageSize: 100 }),
-                getActiveWafRules(),
-                getTemplateVariables(),
+                SettingService.getNotifications({ page: 1, pageSize: 100 }),
+                SettingService.getActiveWafRules(),
+                SettingService.getTemplateVariables(),
             ]);
             setChannels(channelsRes.content);
             setActiveRules(rulesRes);
@@ -59,7 +56,7 @@ const AlertSettingsTabContent: React.FC = () => {
 
   const fetchChannels = async () => {
       try {
-          const res = await getNotifications({ page: 1, pageSize: 100 });
+          const res = await SettingService.getNotifications({ page: 1, pageSize: 100 });
           setChannels(res.content);
       } catch (error) {
           console.error("Failed to fetch notification channels", error);
@@ -68,7 +65,7 @@ const AlertSettingsTabContent: React.FC = () => {
 
   const handleSelectChannel = async (channelId: string) => {
     try {
-      const detail = await getNotificationDetail(channelId);
+      const detail = await SettingService.getNotificationDetail(channelId);
       setSelectedChannelId(channelId);
       setFormData(detail);
       setMode('edit');
@@ -103,9 +100,9 @@ const AlertSettingsTabContent: React.FC = () => {
 
     try {
         if (mode === 'edit' && selectedChannelId) {
-            await updateNotification(selectedChannelId, requestData);
+            await SettingService.updateNotification(selectedChannelId, requestData);
         } else if (mode === 'add') {
-            await addNotification(requestData);
+            await SettingService.addNotification(requestData);
         }
         alert('저장되었습니다.');
         setMode('none');
@@ -122,7 +119,7 @@ const AlertSettingsTabContent: React.FC = () => {
     e.stopPropagation();
     if (window.confirm('정말로 이 채널을 삭제하시겠습니까?')) {
         try {
-            await deleteNotification(channelId);
+            await SettingService.deleteNotification(channelId);
             alert('삭제되었습니다.');
             if (selectedChannelId === channelId) {
                 handleCancel();
