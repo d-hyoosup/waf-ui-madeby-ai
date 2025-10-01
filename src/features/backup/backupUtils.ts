@@ -35,11 +35,10 @@ export const getRollbackActionText = (action: string): string => {
 
 export const getRollbackActionBadgeClass = (action: string): string => {
   switch (action) {
-    case 'JIRA_APPROVAL_WAITING': return 'badge-danger';
+    case 'JIRA_APPROVAL_WAITING': return 'badge-danger';    // 긴급 승인: 빨간색 (유지)
     case 'ROLLBACK_CANCEL': return 'badge-warning';
     case 'VIEW_DETAIL': return 'badge-info';
-    // ✅ [수정] '복원' 버튼의 클래스를 'badge-danger' (빨간색)으로 변경
-    case 'RESTORE': return 'badge-danger';
+    case 'RESTORE': return 'badge-restoring'; // 복원: 주황색으로 변경
     default: return 'badge-secondary';
   }
 };

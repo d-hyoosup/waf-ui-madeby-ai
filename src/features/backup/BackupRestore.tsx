@@ -103,7 +103,13 @@ const BackupRestore = () => {
     const handleRestoreClick = (backupId: string) => {
         const itemToRestore = filteredData.find(item => item.id === backupId);
         if (itemToRestore) {
-             setResourceViewModal({ type: 'restore', items: [{id: itemToRestore.id, status: itemToRestore.status, scopeId: itemToRestore.scopeId}] });
+             setResourceViewModal({
+                 type: 'restore',
+                 items: [
+                     {id: itemToRestore.id, status: itemToRestore.status, scopeId: itemToRestore.scopeId},
+                     {id: 'live', status: 'APPLIED', scopeId: itemToRestore.scopeId} // 'live' 아이템 추가
+                 ]
+             });
         }
     };
 
