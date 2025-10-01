@@ -1,6 +1,6 @@
-// src/components/RestoreStatusModal.tsx
+// src/features/backup/RestoreStatusModal.tsx
 import React, {useEffect, useMemo, useState} from 'react';
-import type {JiraIssue, RestoreData} from '../../types/restore.types.ts';
+import type { JiraIssue, RestoreData } from '../../types/api.types.ts';
 import './RestoreStatusModal.css';
 import {ExternalLinkIcon} from '../../components/common/Icons.tsx';
 
@@ -11,8 +11,6 @@ interface RestoreStatusModalProps {
 
 const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({onClose, data}) => {
     const [cancelStep, setCancelStep] = useState<'confirm' | 'processing' | 'completed'>(data.showCancelProcess ? 'confirm' : 'completed');
-    // const [approver, setApprover] = useState('');
-    // const [reason, setReason] = useState('');
 
     useEffect(() => {
         if (data.showCancelProcess) {
@@ -22,51 +20,29 @@ const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({onClose, data}) 
 
     const getFlagBadgeClass = (flag: JiraIssue['interruptFlag']) => {
         switch (flag) {
-            case 'CANCEL':
-                return 'badge-danger';
-            case 'FORCE_APPROVED':
-                return 'badge-success';
-            default:
-                return 'badge-secondary';
+            case 'CANCEL': return 'badge-danger';
+            case 'FORCE_APPROVED': return 'badge-success';
+            default: return 'badge-secondary';
         }
     };
 
     const getFlagText = (flag: JiraIssue['interruptFlag']) => {
         switch (flag) {
-            case 'CANCEL':
-                return '취소됨';
-            case 'FORCE_APPROVED':
-                return '강제 승인';
-            default:
-                return '-';
+            case 'CANCEL': return '취소됨';
+            case 'FORCE_APPROVED': return '강제 승인';
+            default: return '-';
         }
     };
 
-    // snapshotId: "a1b2c3d4-e5f6-7890-1234-567890abcdef",
-    // accountId: backup.account,
-    // accountName: "HAE_Manager",
-    // regionCode: backup.region,
-    // regionName: AWS_REGIONS.find(r => r.code === backup.region)?.name || backup.region,
-    // scope: backup.region === 'aws-global' ? 'CLOUDFRONT' : 'REGIONAL',
-    // tagName: emergencyApprovalModal.backupId,
-    // status: 'ROLLBACK_INPROGRESS', // 긴급 승인 시 복원중으로 상태 변경
-    // issues: mockIssues,
-
     const currentStep = useMemo(() => {
-        if (data.issues != undefined) {
-            if (data.status === 'ROLLBACK_WAIT_FOR_APPLY') {
-                return 3;
-            } else if (data.status === 'ROLLBACK_INPROGRESS') {
-                return 4;
-            } else if (data.status === 'APPLIED' || data.status === 'ARCHIVED') {
-                return 5;
-            } else {
-                return 2;
-            }
+        if (data.issues) {
+            if (data.status === 'ROLLBACK_WAIT_FOR_APPLY') return 3;
+            if (data.status === 'ROLLBACK_INPROGRESS') return 4;
+            if (data.status === 'APPLIED' || data.status === 'ARCHIVED') return 5;
+            return 2;
         }
-
         return 0;
-    }, [data.status]);
+    }, [data.status, data.issues]);
 
     const statusMessages: { [key: number]: string } = {
         1: `Jira 이슈 등록이 완료되었습니다. 관리자 승인을 대기합니다.`,
@@ -88,9 +64,7 @@ const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({onClose, data}) 
         }, 2000);
     };
 
-    const getModalTitle = () => {
-        return data.showCancelProcess ? '⚠️복원 취소' : 'WAF Rule 복원 작업 상태';
-    };
+    const getModalTitle = () => data.showCancelProcess ? '⚠️복원 취소' : 'WAF Rule 복원 작업 상태';
 
     if (data.showCancelProcess) {
         return (
@@ -105,38 +79,10 @@ const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({onClose, data}) 
                             <div className="cancel-confirmation">
                                 <div className="warning-message">
                                     <div className="warning-text">
-                                        {/*<strong>복원 취소 확인</strong>*/}
                                         <p>진행 중인 WAF Rule 복원 요청을 취소하시겠습니까?</p>
-                                        <ul>
-                                            <li>Jira 이슈가 '취소됨' 상태로 변경됩니다.</li>
-                                        </ul>
+                                        <ul><li>Jira 이슈가 '취소됨' 상태로 변경됩니다.</li></ul>
                                     </div>
                                 </div>
-                                {/*<div className="approval-form">*/}
-                                {/*    <div className="form-group">*/}
-                                {/*        <label htmlFor="approver">승인자 *</label>*/}
-                                {/*        <input*/}
-                                {/*            id="approver"*/}
-                                {/*            type="text"*/}
-                                {/*            value={approver}*/}
-                                {/*            onChange={(e) => setApprover(e.target.value)}*/}
-                                {/*            placeholder="승인자 이름을 입력하세요"*/}
-                                {/*            className="form-input"*/}
-                                {/*        />*/}
-                                {/*    </div>*/}
-
-                                {/*    <div className="form-group">*/}
-                                {/*        <label htmlFor="reason">긴급 복원 사유 *</label>*/}
-                                {/*        <textarea*/}
-                                {/*            id="reason"*/}
-                                {/*            value={reason}*/}
-                                {/*            onChange={(e) => setReason(e.target.value)}*/}
-                                {/*            placeholder="긴급 복원이 필요한 구체적인 사유를 입력하세요"*/}
-                                {/*            className="form-textarea"*/}
-                                {/*            rows={4}*/}
-                                {/*        />*/}
-                                {/*    </div>*/}
-                                {/*</div>*/}
                             </div>
                         )}
                         {cancelStep === 'processing' && (
@@ -183,8 +129,7 @@ const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({onClose, data}) 
 
                     <div className="stepper-container">
                         {steps.map((label, index) => (
-                            <div key={index}
-                                 className={`step ${index + 1 <= currentStep ? (index + 1 === currentStep ? 'active' : 'completed') : ''}`}>
+                            <div key={index} className={`step ${index + 1 <= currentStep ? (index + 1 === currentStep ? 'active' : 'completed') : ''}`}>
                                 <div className="step-icon">{index + 1 < currentStep ? '✔' : index + 1}</div>
                                 <div className="step-label">{label}</div>
                             </div>
@@ -194,10 +139,9 @@ const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({onClose, data}) 
                     <div className="jira-issues-container">
                         <h4>관련 Jira 이슈</h4>
                         <div className="jira-issues-list">
-                            {data.issues.map((issue) => (
+                            {data.issues.map((issue: JiraIssue) => (
                                 <div key={issue.issueKey} className="jira-issue-item">
-                                    <a href={issue.link} target="_blank" rel="noopener noreferrer"
-                                       className="issue-key-link">
+                                    <a href={issue.link} target="_blank" rel="noopener noreferrer" className="issue-key-link">
                                         {issue.issueKey}
                                         <ExternalLinkIcon/>
                                     </a>

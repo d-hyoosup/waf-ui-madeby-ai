@@ -1,6 +1,5 @@
 // src/utils/treeUtils.ts
 
-// --- 타입 정의 ---
 export interface TreeNodeData {
   id: string;
   label: string;
@@ -8,8 +7,7 @@ export interface TreeNodeData {
   type?: 'account' | 'region' | 'webacl' | 'ipset' | 'regex' | 'rulegroup';
 }
 
-// --- 헬퍼 함수 ---
-const getNodeType = (part: string, index: number): TreeNodeData['type'] => {
+const getNodeType = (part: string): TreeNodeData['type'] => {
     if (part.match(/^\d{12}$/)) return 'account';
     if (part.includes('Global') || part.includes('ap-') || part.includes('us-')) return 'region';
     if (part.includes('WebACL')) return 'webacl';
@@ -25,11 +23,11 @@ export const convertPathsToTreeData = (paths: string[]): TreeNodeData[] => {
     paths.forEach((path) => {
         const parts = path.split('/').filter(p => p);
         let currentPath = '';
-        parts.forEach((part, index) => {
+        parts.forEach((part) => {
             const parentPath = currentPath;
             currentPath = currentPath ? `${currentPath}/${part}` : part;
             if (!nodeMap.has(currentPath)) {
-                const nodeType = getNodeType(part, index);
+                const nodeType = getNodeType(part);
                 const node: TreeNodeData = { id: currentPath, label: part, type: nodeType, children: [] };
                 nodeMap.set(currentPath, node);
                 if (parentPath) {

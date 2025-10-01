@@ -1,115 +1,184 @@
-import React, { useState } from 'react';
+// src/features/settings/AlertSettingsTabContent.tsx
+import React, { useState, useEffect } from 'react';
 import '../../components/styles/FormStyles.css';
 import { TrashIcon } from '../../components/common/Icons.tsx';
 import '../../components/styles/TableStyles.css';
 import TreeView from '../../components/common/TreeView.tsx';
-import { convertPathsToTreeData } from '../../utils/treeUtils.ts'; // 수정: 임포트 경로 변경
+import { convertPathsToTreeData } from '../../utils/treeUtils.ts';
+import {
+    getNotifications, getNotificationDetail, addNotification,
+    updateNotification, deleteNotification, getActiveWafRules, getTemplateVariables
+} from '../../api/settingService.ts';
+import type {
+    NotificationSummary, NotificationDetail, NotificationResource
+} from '../../types/api.types.ts';
 
 type OptionKey = 'eventTime' | 'eventName' | 'eventId' | 'awsRegion' | 'userName' | 'ruleName' | 'userAgent' | 'srcIp' | 'link';
 
-interface ChannelOptions {
-  eventTime: boolean; eventName: boolean; eventId: boolean; awsRegion: boolean;
-  userName: boolean; ruleName: boolean; userAgent: boolean; srcIp: boolean; link: boolean;
-}
-
-interface Channel {
-  id: string; name: string; description: string; slackUrl: string;
-  ruleCount: number; options: ChannelOptions; monitoredRules: string[];
-}
-
-const BLANK_CHANNEL: Omit<Channel, 'id' | 'ruleCount'> = {
-  name: '', description: '', slackUrl: '',
-  options: { eventTime: true, eventName: true, eventId: true, awsRegion: true, userName: false, ruleName: true, userAgent: false, srcIp: true, link: true },
-  monitoredRules: [],
+const BLANK_CHANNEL: Omit<NotificationDetail, 'resources'> = {
+  channelInfo: {
+    channelName: '',
+    description: '',
+    slackWebhookUrl: '',
+    messageTemplate: 'eventName;eventTime;accountId;awsRegion;sourceIPAddress;userAgent;userName;RuleName;scope;consoleLink',
+  }
 };
 
-const treeDataSource = [
-    "/123456789012/Global/WebACLs/cpx-global_vehicle_cci-hmg_net",
-    "/123456789012/Global/IP Sets", "/123456789012/Global/Regex pattern sets",
-    "/123456789012/Global/Rule groups", "/123456789012/ap-northeast-1/WebACLs/cpx_ext_cci-hmg_net",
-    "/123456789012/ap-northeast-1/WebACLs/cpx_ap-northeast_hmgmobility.com"
-];
-
 const AlertSettingsTabContent: React.FC = () => {
-  const tree = convertPathsToTreeData(treeDataSource);
-
-  const [channels, setChannels] = useState<Channel[]>([
-    { id: 'ch1', name: '#Global_CPX_WAF', description: 'Global CPX WAF의 WebACL 알림', slackUrl: 'https://slack.com/webhook/global', ruleCount: 1, options: { eventTime: true, eventName: true, eventId: true, awsRegion: true, userName: false, ruleName: true, userAgent: true, srcIp: true, link: true }, monitoredRules: ["/123456789012/Global/WebACLs/cpx-global_vehicle_cci-hmg_net"] },
-    { id: 'ch2', name: '#TMOS_WAF', description: 'TMOS WAF 알림', slackUrl: 'https://slack.com/webhook/tmos', ruleCount: 0, options: { eventTime: true, eventName: false, eventId: true, awsRegion: false, userName: true, ruleName: true, userAgent: false, srcIp: true, link: true }, monitoredRules: [] },
-    { id: 'ch3', name: '#hello_WAF', description: '테스트용 WAF 알림', slackUrl: 'https://slack.com/webhook/hello', ruleCount: 0, options: { eventTime: true, eventName: true, eventId: false, awsRegion: true, userName: false, ruleName: true, userAgent: false, srcIp: false, link: false }, monitoredRules: [] },
-  ]);
+  const [channels, setChannels] = useState<NotificationSummary[]>([]);
+  const [activeRules, setActiveRules] = useState<NotificationResource[]>([]);
+  const [templateVariables, setTemplateVariables] = useState<Record<string, string>>({});
 
   const [selectedChannelId, setSelectedChannelId] = useState<string | null>(null);
   const [mode, setMode] = useState<'none' | 'edit' | 'add'>('none');
-  const [formData, setFormData] = useState<Omit<Channel, 'id' | 'ruleCount'>>(BLANK_CHANNEL);
+  const [formData, setFormData] = useState<NotificationDetail | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const handleSelectChannel = (channelId: string) => {
-    const channel = channels.find(c => c.id === channelId);
-    if (channel) {
+  const tree = convertPathsToTreeData(activeRules.map(r => r.nodePath));
+
+  useEffect(() => {
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [channelsRes, rulesRes, varsRes] = await Promise.all([
+                getNotifications({ page: 1, pageSize: 100 }),
+                getActiveWafRules(),
+                getTemplateVariables(),
+            ]);
+            setChannels(channelsRes.content);
+            setActiveRules(rulesRes);
+            setTemplateVariables(varsRes.variables);
+        } catch (error) {
+            console.error("Failed to load alert settings data", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+    fetchData();
+  }, []);
+
+  const fetchChannels = async () => {
+      try {
+          const res = await getNotifications({ page: 1, pageSize: 100 });
+          setChannels(res.content);
+      } catch (error) {
+          console.error("Failed to fetch notification channels", error);
+      }
+  }
+
+  const handleSelectChannel = async (channelId: string) => {
+    try {
+      const detail = await getNotificationDetail(channelId);
       setSelectedChannelId(channelId);
-      setFormData(channel);
+      setFormData(detail);
       setMode('edit');
+    } catch (error) {
+      console.error(`Failed to fetch channel detail for ${channelId}`, error);
     }
   };
 
   const handleAddClick = () => {
     setSelectedChannelId(null);
-    setFormData(BLANK_CHANNEL);
+    const initialFormData: NotificationDetail = {
+        channelInfo: { ...BLANK_CHANNEL.channelInfo },
+        resources: []
+    }
+    setFormData(initialFormData);
     setMode('add');
   };
 
   const handleCancel = () => {
     setMode('none');
     setSelectedChannelId(null);
+    setFormData(null);
   };
 
-  const handleSave = () => {
-    const ruleCount = formData.monitoredRules.length;
-    let newSelectedId = selectedChannelId;
+  const handleSave = async () => {
+    if (!formData) return;
 
-    if (mode === 'edit' && selectedChannelId) {
-      setChannels(channels.map(c => c.id === selectedChannelId ? { ...c, ...formData, ruleCount } : c));
-    } else if (mode === 'add') {
-      const newChannel: Channel = { id: `ch${Date.now()}`, ...formData, ruleCount };
-      setChannels([...channels, newChannel]);
-      newSelectedId = newChannel.id;
-    }
+    const requestData = {
+        channelInfo: formData.channelInfo,
+        alertNodeIds: formData.resources.filter(r => r.isSelected).map(r => r.nodeId),
+    };
 
-    if (newSelectedId) {
-      handleSelectChannel(newSelectedId);
-    } else {
-      setMode('none');
+    try {
+        if (mode === 'edit' && selectedChannelId) {
+            await updateNotification(selectedChannelId, requestData);
+        } else if (mode === 'add') {
+            await addNotification(requestData);
+        }
+        alert('저장되었습니다.');
+        setMode('none');
+        setSelectedChannelId(null);
+        setFormData(null);
+        fetchChannels();
+    } catch (error) {
+        console.error('Failed to save channel', error);
+        alert('저장에 실패했습니다.');
     }
   };
 
-  const handleDeleteChannel = (e: React.MouseEvent, channelId: string) => {
+  const handleDeleteChannel = async (e: React.MouseEvent, channelId: string) => {
     e.stopPropagation();
     if (window.confirm('정말로 이 채널을 삭제하시겠습니까?')) {
-      setChannels(prev => prev.filter(c => c.id !== channelId));
-      if (selectedChannelId === channelId) {
-        setSelectedChannelId(null);
-        setMode('none');
-      }
+        try {
+            await deleteNotification(channelId);
+            alert('삭제되었습니다.');
+            if (selectedChannelId === channelId) {
+                handleCancel();
+            }
+            fetchChannels();
+        } catch(error) {
+            console.error('Failed to delete channel', error);
+            alert('삭제에 실패했습니다.');
+        }
     }
   };
 
   const handleFormInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (!formData) return;
+    setFormData({
+        ...formData,
+        channelInfo: {
+            ...formData.channelInfo,
+            [e.target.name]: e.target.value
+        }
+    });
   };
 
   const handleCheckboxChange = (key: OptionKey) => {
-    setFormData({ ...formData, options: { ...formData.options, [key]: !formData.options[key] } });
+    if (!formData) return;
+
+    const currentTemplate = formData.channelInfo.messageTemplate;
+    const variables = currentTemplate.split(';').filter(v => v);
+    const newVariables = variables.includes(key)
+      ? variables.filter(v => v !== key)
+      : [...variables, key];
+
+    setFormData({
+      ...formData,
+      channelInfo: {
+        ...formData.channelInfo,
+        messageTemplate: newVariables.join(';')
+      }
+    });
   };
 
   const handleTreeSelectionChange = (selection: string[]) => {
-    setFormData(currentFormData => ({ ...currentFormData, monitoredRules: selection }));
+    if (!formData) return;
+    const updatedResources = activeRules.map(rule => ({
+        ...rule,
+        isSelected: selection.includes(rule.nodePath)
+    }));
+    setFormData({ ...formData, resources: updatedResources });
   };
 
-  const optionLabels: Record<OptionKey, string> = {
-    eventTime: "이벤트 시간", eventName: "이벤트 명", eventId: "계정 ID",
-    awsRegion: "AWS 리전", userName: "사용자명", ruleName: "규칙 이름",
-    userAgent: "사용자 Agent", srcIp: "발신지 IP 주소", link: "link"
-  };
+  const getMonitoredRulesFromFormData = () => {
+      if (!formData || !formData.resources) return [];
+      return formData.resources.filter(r => r.isSelected).map(r => r.nodePath);
+  }
+
+  if (loading) return <p>Loading...</p>
 
   return (
     <div className="alert-settings-container">
@@ -117,11 +186,11 @@ const AlertSettingsTabContent: React.FC = () => {
         <h3>알림 채널 목록</h3>
         <ul>
             {channels.map(channel => (
-                <li key={channel.id} className={channel.id === selectedChannelId ? 'active' : ''} onClick={() => handleSelectChannel(channel.id)}>
-                    <div className="channel-name" title={channel.name}>{channel.name}</div>
+                <li key={channel.notificationId} className={channel.notificationId === selectedChannelId ? 'active' : ''} onClick={() => handleSelectChannel(channel.notificationId)}>
+                    <div className="channel-name" title={channel.channelName}>{channel.channelName}</div>
                     <div className="channel-actions">
-                        <span>{channel.ruleCount}개 규칙</span>
-                        <button className="btn-table delete" title="삭제" onClick={(e) => handleDeleteChannel(e, channel.id)}>
+                        <span>{channel.selectedRulesCount}개 규칙</span>
+                        <button className="btn-table delete" title="삭제" onClick={(e) => handleDeleteChannel(e, channel.notificationId)}>
                             <TrashIcon />
                         </button>
                     </div>
@@ -133,34 +202,32 @@ const AlertSettingsTabContent: React.FC = () => {
         </button>
       </div>
 
-      {(mode === 'add' || mode === 'edit') && (
+      {(mode === 'add' || mode === 'edit') && formData && (
         <div className="channel-details-area">
           <div className="info-panel">
             <h3>{mode === 'add' ? '새 채널 추가' : '채널 상세 수정'}</h3>
             <div className="info-field">
               <label>채널명</label>
-              <input type="text" name="name" value={formData.name} onChange={handleFormInputChange} />
+              <input type="text" name="channelName" value={formData.channelInfo.channelName} onChange={handleFormInputChange} />
             </div>
             <div className="info-field">
               <label>설명</label>
-              <input type="text" name="description" value={formData.description} onChange={handleFormInputChange} />
+              <input type="text" name="description" value={formData.channelInfo.description} onChange={handleFormInputChange} />
             </div>
             <div className="info-field">
               <label>Slack Webhook URL</label>
-              <input type="text" name="slackUrl" value={formData.slackUrl} onChange={handleFormInputChange} />
+              <input type="text" name="slackWebhookUrl" value={formData.channelInfo.slackWebhookUrl} onChange={handleFormInputChange} />
             </div>
             <div className="alert-options">
-              <h4>알림 옵션</h4>
+              <h4>알림 옵션 (Message Template)</h4>
               <div className="option-grid">
-                {Object.keys(optionLabels).map(keyStr => {
-                  const key = keyStr as OptionKey;
-                  return (
+                {Object.entries(templateVariables).map(([key, label]) => (
                     <label key={key}>
-                      <input type="checkbox" checked={formData.options[key]} onChange={() => handleCheckboxChange(key)} />
-                      {optionLabels[key]}
+                      <input type="checkbox" checked={formData.channelInfo.messageTemplate.includes(key)} onChange={() => handleCheckboxChange(key as OptionKey)} />
+                      {label}
                     </label>
-                  );
-                })}
+                  )
+                )}
               </div>
             </div>
           </div>
@@ -170,7 +237,7 @@ const AlertSettingsTabContent: React.FC = () => {
             <div className="rule-monitoring-tree">
               <TreeView
                 data={tree}
-                selectedPaths={formData.monitoredRules}
+                selectedPaths={getMonitoredRulesFromFormData()}
                 onSelectionChange={handleTreeSelectionChange}
                 isReadOnly={false}
               />
