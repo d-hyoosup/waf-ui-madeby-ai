@@ -35,15 +35,27 @@ const BackupRestore = () => {
         setLoading(true);
         try {
             const response = await BackupService.getSnapshots({ page: 1, pageSize: 100 });
-            const formattedData: BackupItemType[] = response.content.map((item: WafSnapshot) => ({
-                ...item,
-                id: item.snapshotId,
-                account: item.accountId,
-                region: item.regionCode,
-                type: item.backupType === 'AUTO' ? '자동백업' : '수동백업',
-                issueCount: item.jiraIssues?.length || 0,
-                status: item.state, // state 값을 status로 복사하여 호환성 유지
-            }));
+            const formattedData: BackupItemType[] = response.content.map((item: WafSnapshot) => {
+                // ID 결정 로직:
+                // 1. snapshotId가 있으면 항상 snapshotId 사용 (백업이 생성된 경우)
+                // 2. snapshotId가 없으면 scopeId 사용 (아직 백업이 없는 경우)
+                // 3. 둘 다 없으면 에러 방지를 위해 빈 문자열 (실제로는 발생하지 않아야 함)
+                const uniqueId = item.snapshotId || item.scopeId || '';
+
+                if (!uniqueId) {
+                    console.warn('Invalid item without ID:', item);
+                }
+
+                return {
+                    ...item,
+                    id: uniqueId,
+                    account: item.accountId,
+                    region: item.regionCode,
+                    type: item.backupType === 'AUTO' ? '자동백업' : '수동백업',
+                    issueCount: item.jiraIssues?.length || 0,
+                    status: item.state, // state 값을 status로 복사하여 호환성 유지
+                };
+            });
             setBackupData(formattedData);
         } catch (error) {
             console.error("Failed to fetch snapshots", error);
@@ -72,6 +84,7 @@ const BackupRestore = () => {
     const selectedItem = useMemo(() => filteredData.find(item => selectedItems.includes(item.id)), [filteredData, selectedItems]);
 
     const handleSelectionChange = (newSelection: string[]) => {
+        console.log('New Selection:', newSelection); // 디버깅용
         setSelectedItems(newSelection);
     };
 

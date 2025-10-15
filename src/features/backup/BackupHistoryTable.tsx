@@ -56,13 +56,17 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
     };
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        e.stopPropagation(); // 이벤트 버블링 방지
         onSelectionChange(e.target.checked ? data.map(item => item.id) : []);
     };
 
-    const handleSelectItem = (id: string) => {
-        const newSelection = selectedItems.includes(id)
-            ? selectedItems.filter(item => item !== id)
-            : [...selectedItems, id];
+    const handleSelectItem = (id: string, event: React.ChangeEvent<HTMLInputElement>) => {
+        event.stopPropagation(); // 이벤트 버블링 방지
+        const isChecked = event.target.checked;
+        const newSelection = isChecked
+            ? [...selectedItems, id]
+            : selectedItems.filter(itemId => itemId !== id);
+        console.log(newSelection);
         onSelectionChange(newSelection);
     };
 
@@ -152,7 +156,14 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
             <table className="data-table" style={{ tableLayout: 'fixed', width: '100%' }}>
                 <thead>
                     <tr>
-                        <th style={{ width: '4%' }}><input type="checkbox" onChange={handleSelectAll} checked={isAllSelected} /></th>
+                        <th style={{ width: '4%' }} onClick={(e) => e.stopPropagation()}>
+                            <input
+                                type="checkbox"
+                                id="backup-select-all"
+                                onChange={handleSelectAll}
+                                checked={isAllSelected}
+                            />
+                        </th>
                         <th style={{ width: '12%', cursor: 'pointer' }} onClick={() => handleSort('accountId')}>Account{getSortIcon('accountId')}</th>
                         <th style={{ width: '14%', cursor: 'pointer' }} onClick={() => handleSort('region')}>리전{getSortIcon('region')}</th>
                         <th style={{ width: '16%', cursor: 'pointer' }} onClick={() => handleSort('tagName')}>Tag (ID){getSortIcon('tagName')}</th>
@@ -169,7 +180,14 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
 
                         return (
                             <tr key={item.id} className={rowClasses}>
-                                <td><input type="checkbox" checked={isSelected} onChange={() => handleSelectItem(item.id)} /></td>
+                                <td onClick={(e) => e.stopPropagation()}>
+                                    <input
+                                        type="checkbox"
+                                        id={`backup-checkbox-${item.id}`}
+                                        checked={isSelected}
+                                        onChange={(e) => handleSelectItem(item.id, e)}
+                                    />
+                                </td>
                                 <td>{item.accountId}</td>
                                 <td>{getRegionDisplayName(item.region)}</td>
                                 <td><a href={`#gitlab-link-for-${item.tagName}`} target="_blank" rel="noopener noreferrer">{item.tagName} <ExternalLinkIcon /></a></td>
