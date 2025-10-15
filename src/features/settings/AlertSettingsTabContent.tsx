@@ -1,5 +1,5 @@
 // src/features/settings/AlertSettingsTabContent.tsx
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 import '../../components/styles/FormStyles.css';
 import { TrashIcon } from '../../components/common/Icons.tsx';
 import '../../components/styles/TableStyles.css';
@@ -31,7 +31,8 @@ const AlertSettingsTabContent: React.FC = () => {
   const [formData, setFormData] = useState<NotificationDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const tree = convertPathsToTreeData(activeRules.map(r => r.nodePath));
+  // activeRules가 변경될 때만 tree를 다시 계산
+  const tree = useMemo(() => convertPathsToTreeData(activeRules.map(r => r.nodePath)), [activeRules]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -43,7 +44,8 @@ const AlertSettingsTabContent: React.FC = () => {
                 SettingService.getTemplateVariables(),
             ]);
             setChannels(channelsRes.content);
-            setActiveRules(rulesRes);
+            // API 응답에는 isSelected가 없으므로 추가해줍니다.
+            setActiveRules(rulesRes.map(rule => ({...rule, isSelected: false})));
             setTemplateVariables(varsRes.variables);
         } catch (error) {
             console.error("Failed to load alert settings data", error);
@@ -63,22 +65,35 @@ const AlertSettingsTabContent: React.FC = () => {
       }
   }
 
+  // --- 💡 수정된 부분 ---
   const handleSelectChannel = async (channelId: string) => {
     try {
-      const detail = await SettingService.getNotificationDetail(channelId);
+      const detailFromApi = await SettingService.getNotificationDetail(channelId);
       setSelectedChannelId(channelId);
-      setFormData(detail);
+
+      // 전체 규칙 목록(activeRules)을 기반으로 API에서 받은 선택 정보를 병합합니다.
+      const selectedNodeIds = new Set(detailFromApi.resources.map(r => r.nodeId));
+      const mergedResources = activeRules.map(rule => ({
+          ...rule,
+          isSelected: selectedNodeIds.has(rule.nodeId)
+      }));
+
+      setFormData({
+          channelInfo: detailFromApi.channelInfo,
+          resources: mergedResources
+      });
       setMode('edit');
     } catch (error) {
       console.error(`Failed to fetch channel detail for ${channelId}`, error);
     }
   };
+  // --- 💡 수정 끝 ---
 
   const handleAddClick = () => {
     setSelectedChannelId(null);
     const initialFormData: NotificationDetail = {
         channelInfo: { ...BLANK_CHANNEL.channelInfo },
-        resources: []
+        resources: activeRules.map(rule => ({ ...rule, isSelected: false }))
     }
     setFormData(initialFormData);
     setMode('add');
@@ -143,10 +158,10 @@ const AlertSettingsTabContent: React.FC = () => {
     });
   };
 
-  const handleCheckboxChange = (key: OptionKey) => {
+  const handleCheckboxChange = (key: string) => {
     if (!formData) return;
 
-    const currentTemplate = formData.channelInfo.messageTemplate;
+    const currentTemplate = formData.channelInfo.messageTemplate || '';
     const variables = currentTemplate.split(';').filter(v => v);
     const newVariables = variables.includes(key)
       ? variables.filter(v => v !== key)
@@ -162,8 +177,8 @@ const AlertSettingsTabContent: React.FC = () => {
   };
 
   const handleTreeSelectionChange = (selection: string[]) => {
-    if (!formData) return;
-    const updatedResources = activeRules.map(rule => ({
+    if (!formData || !formData.resources) return;
+    const updatedResources = formData.resources.map(rule => ({
         ...rule,
         isSelected: selection.includes(rule.nodePath)
     }));
@@ -220,7 +235,7 @@ const AlertSettingsTabContent: React.FC = () => {
               <div className="option-grid">
                 {Object.entries(templateVariables).map(([key, label]) => (
                     <label key={key}>
-                      <input type="checkbox" checked={formData.channelInfo.messageTemplate.includes(key)} onChange={() => handleCheckboxChange(key as OptionKey)} />
+                      <input type="checkbox" checked={formData.channelInfo.messageTemplate.includes(key)} onChange={() => handleCheckboxChange(key)} />
                       {label}
                     </label>
                   )

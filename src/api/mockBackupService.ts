@@ -41,7 +41,7 @@ export const getJiraIssues = (snapshotId: string): Promise<RollbackProcessInfo> 
                     regionName: backup.regionName,
                     scope: backup.scope,
                     tagName: backup.tagName,
-                    status: backup.status,
+                    state: backup.state, // status -> state
                     issues: (backup.jiraIssues || []).map(key => ({
                         issueKey: key,
                         link: `https://jira.example.com/browse/${key}`,

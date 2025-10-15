@@ -25,7 +25,9 @@ export const convertPathsToTreeData = (paths: string[]): TreeNodeData[] => {
         let currentPath = '';
         parts.forEach((part) => {
             const parentPath = currentPath;
-            currentPath = currentPath ? `${currentPath}/${part}` : part;
+            // --- 💡 수정된 부분: 경로 맨 앞에 '/'를 추가하여 ID를 생성합니다 ---
+            currentPath = `${parentPath}/${part}`;
+            // --- 💡 수정 끝 ---
             if (!nodeMap.has(currentPath)) {
                 const nodeType = getNodeType(part);
                 const node: TreeNodeData = { id: currentPath, label: part, type: nodeType, children: [] };

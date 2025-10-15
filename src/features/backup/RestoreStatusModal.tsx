@@ -36,13 +36,13 @@ const RestoreStatusModal: React.FC<RestoreStatusModalProps> = ({onClose, data}) 
 
     const currentStep = useMemo(() => {
         if (data.issues) {
-            if (data.status === 'ROLLBACK_WAIT_FOR_APPLY') return 3;
-            if (data.status === 'ROLLBACK_INPROGRESS') return 4;
-            if (data.status === 'APPLIED' || data.status === 'ARCHIVED') return 5;
+            if (data.state === 'ROLLBACK_WAIT_FOR_APPLY') return 3;
+            if (data.state === 'ROLLBACK_IN_PROGRESS') return 4;
+            if (data.state === 'APPLIED' || data.state === 'ARCHIVED') return 5;
             return 2;
         }
         return 0;
-    }, [data.status, data.issues]);
+    }, [data.state, data.issues]);
 
     const statusMessages: { [key: number]: string } = {
         1: `Jira 이슈 등록이 완료되었습니다. 관리자 승인을 대기합니다.`,

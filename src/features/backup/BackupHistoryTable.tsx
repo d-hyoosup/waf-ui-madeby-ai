@@ -2,9 +2,8 @@
 import React, { useMemo, useState } from 'react';
 import '../../components/styles/TableStyles.css';
 import { ExternalLinkIcon } from '../../components/common/Icons.tsx';
-import type { BackupItem, BackupStatus } from '../../types/api.types.ts';
+import type { BackupItem } from '../../types/api.types.ts';
 import { getRegionDisplayName } from '../../constants/awsRegions.ts';
-// ✅ [수정] 분리된 유틸리티 함수들을 import 합니다.
 import {
     getStatusBadgeClass,
     getStatusText,
@@ -21,7 +20,7 @@ interface BackupHistoryTableProps {
     onRestoreClick: (backupId: string) => void;
 }
 
-type SortField = 'tagName' | 'accountId' | 'region' | 'type' | 'status';
+type SortField = 'tagName' | 'accountId' | 'region' | 'type' | 'state';
 type SortOrder = 'asc' | 'desc';
 
 const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
@@ -115,9 +114,9 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
     };
 
     const renderActionButtons = (item: BackupItem) => {
-        const showDetailButton = item.status === 'ROLLBACK_IN_PROGRESS' || (item.status === 'ARCHIVED' && (item.issueCount ?? 0) > 0);
-        const showAllButtons = item.status === 'ROLLBACK_WAIT_FOR_APPLY';
-        const showRestoreButton = item.status === 'ARCHIVED';
+        const showDetailButton = item.state === 'ROLLBACK_IN_PROGRESS' || (item.state === 'ARCHIVED' && (item.issueCount ?? 0) > 0);
+        const showAllButtons = item.state === 'ROLLBACK_WAIT_FOR_APPLY';
+        const showRestoreButton = item.state === 'ARCHIVED';
 
         return (
             <div className="action-badges">
@@ -158,7 +157,7 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
                         <th style={{ width: '14%', cursor: 'pointer' }} onClick={() => handleSort('region')}>리전{getSortIcon('region')}</th>
                         <th style={{ width: '16%', cursor: 'pointer' }} onClick={() => handleSort('tagName')}>Tag (ID){getSortIcon('tagName')}</th>
                         <th style={{ width: '10%', cursor: 'pointer' }} onClick={() => handleSort('type')}>백업 방식{getSortIcon('type')}</th>
-                        <th style={{ width: '8%', cursor: 'pointer' }} onClick={() => handleSort('status')}>상태{getSortIcon('status')}</th>
+                        <th style={{ width: '8%', cursor: 'pointer' }} onClick={() => handleSort('state')}>상태{getSortIcon('state')}</th>
                         <th style={{ width: '18%' }}>Jira 이슈</th>
                         <th style={{ width: '18%' }}>동작</th>
                     </tr>
@@ -175,7 +174,7 @@ const BackupHistoryTable: React.FC<BackupHistoryTableProps> = ({
                                 <td>{getRegionDisplayName(item.region)}</td>
                                 <td><a href={`#gitlab-link-for-${item.tagName}`} target="_blank" rel="noopener noreferrer">{item.tagName} <ExternalLinkIcon /></a></td>
                                 <td>{item.type}</td>
-                                <td><span className={`badge ${getStatusBadgeClass(item.status)}`}>{getStatusText(item.status)}</span></td>
+                                <td><span className={`badge ${getStatusBadgeClass(item.state)}`}>{getStatusText(item.state)}</span></td>
                                 <td>{renderJiraIssues(item)}</td>
                                 <td>{renderActionButtons(item)}</td>
                             </tr>

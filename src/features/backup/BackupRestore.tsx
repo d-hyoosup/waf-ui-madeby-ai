@@ -6,7 +6,7 @@ import ResourceViewModal from './ResourceViewModal.tsx';
 import RestoreStatusModal from './RestoreStatusModal.tsx';
 import EmergencyApprovalModal from './EmergencyApprovalModal.tsx';
 import RestoreCancelModal from './RestoreCancelModal.tsx';
-import type { RestoreData, BackupItem as BackupItemType, BackupStatus } from '../../types/api.types.ts';
+import type { RestoreData, BackupItem as BackupItemType, BackupStatus, WafSnapshot } from '../../types/api.types.ts';
 import { AWS_REGIONS } from '../../constants/awsRegions.ts';
 import '../../components/styles/FilterStyles.css';
 import { BackupService } from '../../api';
@@ -35,13 +35,14 @@ const BackupRestore = () => {
         setLoading(true);
         try {
             const response = await BackupService.getSnapshots({ page: 1, pageSize: 100 });
-            const formattedData: BackupItemType[] = response.content.map((item: any) => ({
+            const formattedData: BackupItemType[] = response.content.map((item: WafSnapshot) => ({
                 ...item,
                 id: item.snapshotId,
                 account: item.accountId,
                 region: item.regionCode,
                 type: item.backupType === 'AUTO' ? '자동백업' : '수동백업',
                 issueCount: item.jiraIssues?.length || 0,
+                status: item.state, // state 값을 status로 복사하여 호환성 유지
             }));
             setBackupData(formattedData);
         } catch (error) {
@@ -76,11 +77,11 @@ const BackupRestore = () => {
 
     const handleCompare = () => {
         if (numSelected === 1 && selectedItem) {
-            setResourceViewModal({ type: 'compare', items: [{ id: selectedItem.id, status: selectedItem.status, scopeId: selectedItem.scopeId }, { id: 'live', status: 'APPLIED', scopeId: selectedItem.scopeId }] });
+            setResourceViewModal({ type: 'compare', items: [{ id: selectedItem.id, status: selectedItem.state, scopeId: selectedItem.scopeId }, { id: 'live', status: 'APPLIED', scopeId: selectedItem.scopeId }] });
         } else if (numSelected === 2) {
              const itemsInSelectionOrder = selectedItems.map(id => {
                 const item = filteredData.find(d => d.id === id)!;
-                return { id: item.id, status: item.status, scopeId: item.scopeId };
+                return { id: item.id, status: item.state, scopeId: item.scopeId };
             });
             setResourceViewModal({ type: 'compare', items: itemsInSelectionOrder });
         }
@@ -106,8 +107,8 @@ const BackupRestore = () => {
              setResourceViewModal({
                  type: 'restore',
                  items: [
-                     {id: itemToRestore.id, status: itemToRestore.status, scopeId: itemToRestore.scopeId},
-                     {id: 'live', status: 'APPLIED', scopeId: itemToRestore.scopeId} // 'live' 아이템 추가
+                     {id: itemToRestore.id, status: itemToRestore.state, scopeId: itemToRestore.scopeId},
+                     {id: 'live', status: 'APPLIED', scopeId: itemToRestore.scopeId}
                  ]
              });
         }

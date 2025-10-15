@@ -1,5 +1,5 @@
 // src/api/mockSettingService.ts
-import type { PagedResponse, WafSetting, UpdateSettingRequest, NotificationSummary, AddNotificationRequest } from '../types/api.types';
+import type { PagedResponse, WafSetting, UpdateSettingRequest, NotificationSummary, AddNotificationRequest, NotificationResource } from '../types/api.types';
 
 const mockSettings: WafSetting[] = [
     { scopeId: 'scope-1', accountId: '123456789012', region: 'us-east-1', managed: true, backupType: 'AUTO' },
@@ -40,5 +40,55 @@ export const getNotificationDetail = (_id: string) => new Promise(res => setTime
 export const addNotification = (_data: AddNotificationRequest) => new Promise(res => setTimeout(() => res({}), 300));
 export const updateNotification = (_id: string, _data: AddNotificationRequest) => new Promise(res => setTimeout(() => res({}), 300));
 export const deleteNotification = (_id: string) => new Promise(res => setTimeout(() => res({}), 300));
-export const getActiveWafRules = () => new Promise(res => setTimeout(() => res([]), 300));
-export const getTemplateVariables = () => new Promise(res => setTimeout(() => res({variables: {}}), 300));
+
+// --- 💡 수정된 부분 ---
+// WAF Rule 모니터링을 위한 목업 데이터를 추가합니다.
+const mockActiveWafRules: NotificationResource[] = [
+    {
+        "isSelected": false, "nodeId": "123456789012", "awsAccountId": "123456789012",
+        "regionCode": "", "scope": "", "resourceType": "", "fileName": "",
+        "nodePath": "/123456789012"
+    },
+    {
+        "isSelected": false, "nodeId": "123456789012/Global", "awsAccountId": "123456789012",
+        "regionCode": "aws-global", "scope": "CLOUDFRONT", "resourceType": "", "fileName": "",
+        "nodePath": "/123456789012/Global"
+    },
+    {
+        "isSelected": false, "nodeId": "123456789012/Global/WebACLs", "awsAccountId": "123456789012",
+        "regionCode": "aws-global", "scope": "CLOUDFRONT", "resourceType": "WEB_ACL", "fileName": "",
+        "nodePath": "/123456789012/Global/WebACLs"
+    },
+    {
+        "isSelected": true, "nodeId": "123456789012/Global/WebACLs/cpx-global_vehicle_cci-hmg_net", "awsAccountId": "123456789012",
+        "regionCode": "aws-global", "scope": "CLOUDFRONT", "resourceType": "WEB_ACL", "fileName": "cpx-global_vehicle_cci-hmg_net",
+        "nodePath": "/123456789012/Global/WebACLs/cpx-global_vehicle_cci-hmg_net"
+    },
+    {
+        "isSelected": false, "nodeId": "123456789012/ap-northeast-1", "awsAccountId": "123456789012",
+        "regionCode": "ap-northeast-1", "scope": "REGIONAL", "resourceType": "", "fileName": "",
+        "nodePath": "/123456789012/ap-northeast-1"
+    },
+    {
+        "isSelected": false, "nodeId": "123456789012/ap-northeast-1/WebACLs", "awsAccountId": "123456789012",
+        "regionCode": "ap-northeast-1", "scope": "REGIONAL", "resourceType": "WEB_ACL", "fileName": "",
+        "nodePath": "/123456789012/ap-northeast-1/WebACLs"
+    },
+    {
+        "isSelected": false, "nodeId": "123456789012/ap-northeast-1/WebACLs/cpx_ext_cci-hmg_net", "awsAccountId": "123456789012",
+        "regionCode": "ap-northeast-1", "scope": "REGIONAL", "resourceType": "WEB_ACL", "fileName": "cpx_ext_cci-hmg_net",
+        "nodePath": "/123456789012/ap-northeast-1/WebACLs/cpx_ext_cci-hmg_net"
+    },
+];
+
+export const getActiveWafRules = (): Promise<NotificationResource[]> => {
+    // 빈 배열 대신 목업 데이터를 반환하도록 수정합니다.
+    return new Promise(res => setTimeout(() => res(mockActiveWafRules), 300));
+};
+// --- 💡 수정 끝 ---
+
+export const getTemplateVariables = () => new Promise(res => setTimeout(() => res({variables: {
+    "eventTime": "이벤트 시간", "eventName": "이벤트 명", "accountId": "계정 ID",
+    "awsRegion": "AWS 리전", "userName": "사용자명", "ruleName": "규칙 이름",
+    "userAgent": "사용자 Agent", "sourceIPAddress": "발신지 IP 주소", "consoleLink": "콘솔 링크"
+}}), 300));

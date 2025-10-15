@@ -111,7 +111,7 @@ export interface WafSnapshot {
   scope: string;
   tagName: string;
   backupType: BackupType;
-  status: BackupStatus;
+  state: BackupStatus; // status -> state로 변경
   requiresManualBackup: boolean;
   hasJiraIssues: boolean;
   jiraIssues?: string[];
@@ -123,6 +123,7 @@ export type BackupItem = WafSnapshot & {
   account: string; // accountId와 동일, 호환성을 위해 유지
   region: string; // regionCode와 동일
   type: '자동백업' | '수동백업';
+  status: BackupStatus; // BackupHistoryTable 컴포넌트 호환성을 위해 유지 (state 값과 동일)
   rollbackStatus?: 'JIRA_APPROVAL_WAITING' | 'ROLLBACK_CANCEL' | 'VIEW_DETAIL';
 };
 
@@ -141,7 +142,7 @@ export interface RollbackProcessInfo {
   regionName: string;
   scope: string;
   tagName: string;
-  status: BackupStatus;
+  state: BackupStatus; // status -> state로 변경
   issues: JiraIssue[];
 }
 
