@@ -27,53 +27,62 @@ export interface PagedResponse<T> {
 }
 
 // 2. Account Management
-export interface WafManagerAccount {
+export interface WafManagerAccount { // Corresponds to WafManagerAccountVO
   accountId: string;
   accountName: string;
-  email?: string;
+  email?: string; // Not in WafManagerAccountVO schema, but present in GET /accounts example
 }
 
-export type AddAccountRequest = Omit<WafManagerAccount, 'email'>;
+export type AddAccountRequest = Omit<WafManagerAccount, 'email'>; // Corresponds to RequestAddAccountDto
 
 
 // 3. Settings Management
+// ✅ [수정] Swagger enum 값 MANUAL, AUTO 로 수정
 export type BackupType = 'MANUAL' | 'AUTO';
 
-export interface WafSetting {
+export interface WafSetting { // Corresponds to WafSettingVO
   scopeId: string;
   accountId: string;
-  region: string;
+  regionCode: string; // Corresponds to 'region' in WafSettingVO, renamed for clarity
   managed: boolean;
   backupType: BackupType;
+  // Additional fields from WafSettingVO
+  accountName?: string;
   regionName?: string;
+  configured?: boolean;
+  region: string; // Keep original 'region' from WafSettingVO if needed elsewhere
 }
 
-export interface UpdateSettingRequest {
+export interface UpdateSettingRequest { // Corresponds to UpdateSettingDto
   scopeId: string;
   managed: boolean;
   backupType: BackupType;
 }
 
 // 4. Alert Settings
-export interface NotificationSummary {
+export interface NotificationSummary { // Corresponds to NotificationSummaryVO
   notificationId: string;
   channelName: string;
   selectedRulesCount: number;
-  affectedRulesCount: number;
+  // affectedRulesCount: number; // Not in NotificationSummaryVO
   description: string;
 }
 
-export interface NotificationChannelInfo {
+export interface NotificationChannelInfo { // Corresponds to NotificationChannelVO and RequestNotificationChannelDTO
   channelName: string;
   description: string;
   slackWebhookUrl: string;
   messageTemplate: string;
+  // Potential additions based on Swagger examples (getNotificationDetail)
+  // notificationLevel?: string;
+  // titleTemplate?: string;
+  // bodyTemplate?: string;
 }
 
-export interface NotificationResource {
+export interface NotificationResource { // Corresponds to NotificationResourceVO
   isSelected: boolean;
   nodeId: string;
-  awsAccountId: string;
+  awsAccountId: string; // Changed from accountId to match Swagger
   regionCode: string;
   scope: string;
   resourceType: string;
@@ -81,60 +90,75 @@ export interface NotificationResource {
   nodePath: string;
 }
 
-export interface NotificationDetail {
+export interface NotificationDetail { // Corresponds to NotificationVO
   channelInfo: NotificationChannelInfo;
-  resources: NotificationResource[];
+  resources: NotificationResource[]; // Corresponds to 'resources' in NotificationVO
 }
 
-export interface AddNotificationRequest {
+export interface AddNotificationRequest { // Corresponds to RequestNotificationDTO
     channelInfo: NotificationChannelInfo;
     alertNodeIds: string[];
 }
 
-export interface TemplateVariables {
+export interface TemplateVariables { // Corresponds to GET /waf/notifications/variables response data
     templateTypes: string;
     variables: Record<string, string>;
 }
 
 
 // 5. Backup & Restore
-export type BackupStatus = 'INIT' | 'APPLIED' | 'ARCHIVED' | 'ROLLBACK_WAIT_FOR_APPLY' | 'ROLLBACK_IN_PROGRESS';
-export type InterruptFlag = 'CANCEL' | 'FORCE_APPROVED' | 'NONE' | string;
+export type BackupStatus = 'INIT' | 'APPLIED' | 'ARCHIVED' | 'ROLLBACK_WAIT_FOR_APPLY' | 'ROLLBACK_IN_PROGRESS' | 'ROLLING_BACK'; // Added ROLLING_BACK based on example
 
-export interface WafSnapshot {
+export type InterruptFlag = 'CANCEL' | 'FORCE_APPROVED' | 'NONE' | string; // From IssueInfoVO
+
+// Jira related info from WafSnapshotVO
+export interface JiraInfo {
+    jiraIssueKey: string;
+    jiraIssueLink: string;
+    issueStatus?: string; // Optional based on Swagger schema vs example discrepancy
+}
+
+export interface WafSnapshot { // Corresponds to WafSnapshotVO
   snapshotId: string;
   scopeId: string;
   accountId: string;
   accountName: string;
-  regionCode: string;
+  regionCode: string; // Use regionCode consistently
   regionName: string;
   scope: string;
   tagName: string;
+  gitlabUrl?: string; // Added from WafSnapshotVO
   backupType: BackupType;
-  state: BackupStatus; // status -> state로 변경
+  state: BackupStatus; // Changed from status to state
   requiresManualBackup: boolean;
-  hasJiraIssues: boolean;
-  jiraIssues?: string[];
-  issueCount?: number;
+  jira?: JiraInfo | null; // Changed from jiraIssues: string[]
+  jiraBaseUrl?: string; // Added from WafSnapshotVO
+  // hasJiraIssues and issueCount removed (derive in frontend if needed)
 }
 
+// Type used by BackupHistoryTable component, derived from WafSnapshot
 export type BackupItem = WafSnapshot & {
-  id: string; // snapshotId와 동일
-  account: string; // accountId와 동일, 호환성을 위해 유지
-  region: string; // regionCode와 동일
-  type: '자동백업' | '수동백업';
-  status: BackupStatus; // BackupHistoryTable 컴포넌트 호환성을 위해 유지 (state 값과 동일)
-  rollbackStatus?: 'JIRA_APPROVAL_WAITING' | 'ROLLBACK_CANCEL' | 'VIEW_DETAIL';
+  id: string; // snapshotId or scopeId for uniqueness
+  account: string; // Maintain for compatibility (accountId)
+  region: string; // Maintain for compatibility (regionCode)
+  // ✅ [수정] 자동백업, 수동백업 문자열은 UI 표시용으로 BackupRestore 에서 변환
+  type: '자동백업' | '수동백업'; // Derived from backupType
+  status: BackupStatus; // Maintain for compatibility (state)
+  // rollbackStatus removed
+  // Calculated fields for UI
+  hasJiraIssues: boolean;
+  issueCount: number;
+  jiraIssues?: string[]; // Keep optionally for compatibility if needed by table logic initially
 };
 
 
-export interface JiraIssue {
+export interface JiraIssue { // Corresponds to IssueInfoVO
   issueKey: string;
-  link: string;
+  link: string; // Changed from jiraIssueLink to link
   interruptFlag: InterruptFlag;
 }
 
-export interface RollbackProcessInfo {
+export interface RollbackProcessInfo { // Corresponds to RollbackProcessInfoVO
   snapshotId: string;
   accountId: string;
   accountName: string;
@@ -142,8 +166,8 @@ export interface RollbackProcessInfo {
   regionName: string;
   scope: string;
   tagName: string;
-  state: BackupStatus; // status -> state로 변경
-  issues: JiraIssue[];
+  state: BackupStatus; // Changed from status to state
+  issues: JiraIssue[]; // Changed from jiraIssues
 }
 
 export type RestoreData = RollbackProcessInfo & {
@@ -151,66 +175,72 @@ export type RestoreData = RollbackProcessInfo & {
 };
 
 
-export interface RollbackInterruptRequest {
+export interface RollbackInterruptRequest { // Corresponds to RequestRollbackInterruptDTO
   snapshotId: string;
   jiraIssueKey: string;
   interruptedBy: string;
   reason: string;
 }
 
-export interface WafRuleResourceFile {
+export interface WafRuleResourceFile { // Corresponds to WafRuleResourceVO
     resourceType: string;
     files: string[];
 }
 
-export interface WafRuleDiffStatus {
+export interface WafRuleDiffStatus { // Corresponds to WafRuleDiffStatusVO
     resourceType: string;
     fileName: string;
     status: 'ADDED' | 'DELETED' | 'MODIFIED' | 'UNCHANGED';
 }
 
+// WAF Resource Types (mirroring Swagger definitions)
 interface WafVisibilityConfig {
   SampledRequestsEnabled: boolean;
   CloudWatchMetricsEnabled: boolean;
   MetricName: string;
 }
 
-export interface WebAcl {
+export interface WebAcl { // Corresponds to WebACL schema (simplified)
   Name: string;
   Id: string;
   ARN: string;
   DefaultAction: { [key: string]: object };
   Rules?: object[];
   VisibilityConfig: WafVisibilityConfig;
+  // Add other fields like Scope, LockToken if needed based on usage
 }
 
-export interface IpSet {
+export interface IpSet { // Corresponds to IPSet schema
   Name: string;
   Id: string;
   ARN: string;
   IPAddressVersion: 'IPV4' | 'IPV6';
   Addresses: string[];
+  // Add other fields like Scope, LockToken if needed
 }
 
-export interface RuleGroup {
+export interface RuleGroup { // Corresponds to RuleGroup schema (simplified)
   Name: string;
   Id: string;
   ARN: string;
   Capacity: number;
   Rules?: object[];
   VisibilityConfig: WafVisibilityConfig;
+  // Add other fields like Scope, LockToken if needed
 }
 
-export interface RegexPatternSet {
+export interface RegexPatternSet { // Corresponds to RegexPatternSet schema
   Name: string;
   Id: string;
   ARN: string;
   RegularExpressionList: { RegexString: string }[];
+  // Add other fields like Scope, LockToken if needed
 }
 
+// Union type for WAF resources
 export type WafResource = WebAcl | IpSet | RuleGroup | RegexPatternSet;
 
-export interface WafRulePairContent {
+export interface WafRulePairContent { // Corresponds to WafRulePairContentVOObject
     base: WafResource | null;
     target: WafResource | null;
 }

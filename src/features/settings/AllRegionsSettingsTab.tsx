@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import '../../components/styles/TableStyles.css';
 import '../../components/styles/FilterStyles.css';
-import { AWS_REGIONS } from '../../constants/awsRegions.ts';
+import { AWS_REGIONS, getRegionDisplayName } from '../../constants/awsRegions.ts'; // getRegionDisplayName 추가
 import { SettingService } from '../../api';
 import type { WafSetting, BackupType } from '../../types/api.types.ts';
 
@@ -21,11 +21,17 @@ const AllRegionsSettingsTab = () => {
             setLoading(true);
             try {
                 const response = await SettingService.getSettings({ page: 1, pageSize: 200 });
-                const settingsWithRegionName = response.content.map(s => ({
+                // --- 수정된 부분 ---
+                // API 응답에 regionName이 있으므로 직접 사용합니다.
+                // regionCode를 사용해 일관된 표시 이름 형식을 원하면 getRegionDisplayName을 사용할 수 있습니다.
+                // 예: regionDisplayName: getRegionDisplayName(s.regionCode)
+                const settingsWithCorrectRegion = response.content.map(s => ({
                     ...s,
-                    regionName: AWS_REGIONS.find(r => r.code === s.region)?.name || s.region,
+                    // API 응답의 regionName을 그대로 사용하거나, 필요시 awsRegions.ts에서 조회
+                    regionName: s.regionName || getRegionDisplayName(s.regionCode) // API 응답 우선, 없으면 매핑 시도
                 }));
-                setSettings(settingsWithRegionName);
+                setSettings(settingsWithCorrectRegion);
+                // --- 수정 끝 ---
             } catch (error) {
                 console.error("Failed to fetch settings", error);
             } finally {
@@ -75,7 +81,10 @@ const AllRegionsSettingsTab = () => {
     const filteredSettings = useMemo(() => {
         return settings.filter(item => {
             if (filters.account && item.accountId !== filters.account) return false;
-            if (filters.region && item.region !== filters.region) return false;
+            // --- 수정된 부분 ---
+            // regionCode 기준으로 필터링
+            if (filters.region && item.regionCode !== filters.region) return false;
+            // --- 수정 끝 ---
             if (filters.isManaged !== '') {
                 const isManaged = filters.isManaged === 'true';
                 if (item.managed !== isManaged) return false;
@@ -96,6 +105,15 @@ const AllRegionsSettingsTab = () => {
                 return sortOrder === 'asc' ? (aVal === bVal ? 0 : aVal ? -1 : 1) : (aVal === bVal ? 0 : aVal ? 1 : -1)
             }
 
+            // --- 수정된 부분 ---
+            // regionName으로 정렬하도록 명시적 처리 (문자열 비교)
+             if (sortField === 'regionName') {
+                 const nameA = String(aVal);
+                 const nameB = String(bVal);
+                 return sortOrder === 'asc' ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+             }
+            // --- 수정 끝 ---
+
             if (aVal < bVal) return sortOrder === 'asc' ? -1 : 1;
             if (aVal > bVal) return sortOrder === 'asc' ? 1 : -1;
             return 0;
@@ -103,6 +121,19 @@ const AllRegionsSettingsTab = () => {
     }, [filteredSettings, sortField, sortOrder]);
 
     const uniqueAccounts = useMemo(() => [...new Set(settings.map(s => s.accountId))], [settings]);
+    // --- 수정된 부분 ---
+    // 필터링 옵션 생성을 위해 regionCode와 매핑된 이름을 사용
+    const uniqueRegions = useMemo(() => {
+        const regionMap = new Map<string, string>();
+        settings.forEach(s => {
+            if (!regionMap.has(s.regionCode)) {
+                // API 응답의 regionName을 사용하거나, 없으면 awsRegions.ts에서 찾음
+                regionMap.set(s.regionCode, s.regionName || getRegionDisplayName(s.regionCode));
+            }
+        });
+        return Array.from(regionMap.entries()).map(([code, name]) => ({ code, name }));
+    }, [settings]);
+    // --- 수정 끝 ---
 
     if (loading) return <p>Loading settings...</p>;
 
@@ -128,11 +159,13 @@ const AllRegionsSettingsTab = () => {
                         onChange={(e) => setFilters({...filters, region: e.target.value})}
                     >
                         <option value="">전체</option>
-                        {AWS_REGIONS.map(region => (
+                        {/* --- 수정된 부분: uniqueRegions 사용 --- */}
+                        {uniqueRegions.map(region => (
                             <option key={region.code} value={region.code}>
-                                {region.name}
+                                {region.name} {/* API 응답 또는 매핑된 이름 표시 */}
                             </option>
                         ))}
+                        {/* --- 수정 끝 --- */}
                     </select>
                 </div>
                 <div className="filter-group">
@@ -176,7 +209,9 @@ const AllRegionsSettingsTab = () => {
                         {sortedSettings.map((s) => (
                             <tr key={s.scopeId}>
                                 <td>{s.accountId}</td>
+                                {/* --- 수정된 부분: s.regionName 사용 --- */}
                                 <td>{s.regionName}</td>
+                                {/* --- 수정 끝 --- */}
                                 <td>
                                     <label className="toggle-switch">
                                         <input
